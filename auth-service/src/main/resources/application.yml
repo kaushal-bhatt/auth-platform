@@ -5,7 +5,7 @@ spring:
   application:
     name: auth-service
   datasource:
-    url: jdbc:postgresql://localhost:6543/authplatform
+    url: jdbc:postgresql://localhost:5433/authplatform
     username: authplatform
     password: authplatform
   jpa:
