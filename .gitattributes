@@ -1,0 +1,16 @@
+# Normalize line endings so the repo is consistent across Windows, macOS, and Linux.
+# Text files are stored with LF in the repository and checked out per the platform.
+* text=auto eol=lf
+
+# Scripts that must keep a specific line ending regardless of platform.
+gradlew        text eol=lf
+*.sh           text eol=lf
+*.bat          text eol=crlf
+*.cmd          text eol=crlf
+
+# Binary assets — never touch their bytes.
+*.jar          binary
+*.png          binary
+*.jpg          binary
+*.gif          binary
+*.ico          binary

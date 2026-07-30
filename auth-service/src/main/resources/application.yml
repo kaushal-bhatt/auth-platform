@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://localhost:6543/authplatform
+    username: authplatform
+    password: authplatform
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+auth-platform:
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+  jwt:
+    jwks-uri: http://localhost:8080/.well-known/jwks.json
+    expected-issuer: auth-service
+    # audience verification is OFF by default (auth-jwt-lib skips the check when this is
+    # unset). If you enable it, the value MUST be exactly the string this service puts in the
+    # `aud` claim — auth-platform.issuer.audience below. Any other value ("auth-platform",
+    # "auth-service", ...) makes every token in the platform fail verification.
+    # expected-audience: auth-platform-client
+  issuer:
+    issuer: auth-service
+    # goes into the `aud` claim of every access token. Cross-service contract — keep in sync
+    # with auth-platform.jwt.expected-audience above wherever that is enabled.
+    audience: auth-platform-client
+    access-token-expiry-minutes: 15
+    refresh-token-expiry-minutes: 43200
+    # must be supplied via the AUTH_PLATFORM_ISSUER_KEY_PROTECTION_SECRET environment
+    # variable (or equivalent secret manager injection) — never commit a real value here.
+    # the empty default is intentional: if the env var is not set, KeyProtector's blank
+    # check trips and startup fails fast with an actionable error, instead of silently
+    # falling back to a value that lives in source control. generate one with:
+    #   openssl rand -base64 32
+    key-protection-secret: ${AUTH_PLATFORM_ISSUER_KEY_PROTECTION_SECRET:}
+  webauthn:
+    relying-party-id: localhost
+    relying-party-name: Auth Platform
+    origin: http://localhost:3000

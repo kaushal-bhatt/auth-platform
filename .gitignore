@@ -1,0 +1,28 @@
+.gradle/
+build/
+out/
+*.iws
+*.iml
+*.ipr
+.idea/
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+# stray compiler output (e.g. from running javac directly in a source dir)
+*.class
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+docs/
+
+# editor/tooling local config
+.claude/
+
+# local environment
+.env
+*.log

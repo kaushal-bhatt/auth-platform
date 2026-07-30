@@ -1,0 +1,61 @@
+# NOTE: Gradle puts test resources ahead of main resources on the test classpath, and
+# Spring Boot's default `classpath:/application.yml` location resolves to a single
+# resource (first one found) rather than merging same-named files across classpath
+# roots. This file therefore *replaces* src/main/resources/application.yml entirely for
+# every @SpringBootTest — it does not layer on top of it. Keep it to only the handful of
+# properties that (a) tests actually need and (b) main's file cannot supply an empty-safe
+# default for. Everything else (datasource, liquibase) is either supplied per-test via
+# @DynamicPropertySource or has a safe Spring Boot default when absent.
+spring:
+  jpa:
+    hibernate:
+      # Fix 6: `validate` is the only mechanism that catches drift between the JPA entities
+      # and the Liquibase migrations. It was set in src/main/resources/application.yml but
+      # absent here, and because this file *replaces* main's wholesale (see the note above)
+      # Boot fell back to `none` under test - so the guard only ever ran in production, where
+      # drift surfaces as a startup crash behind a fully green test suite. Every
+      # @SpringBootTest here runs Liquibase against a fresh Testcontainers Postgres, so this
+      # now validates the real migrated schema against the real entities on every build.
+      ddl-auto: validate
+
+auth-platform:
+  issuer:
+    # test-only secret, generated via `openssl rand -base64 32`. Never use this value
+    # outside tests. Fix 1 makes the main config's secret an empty-default placeholder
+    # that must fail closed, so tests need their own valid 32-byte AES-256 key here.
+    key-protection-secret: Q0WeROFc/jw96Stf8NZ4GzEv2Cphor8i8DxrktFEuck=
+    # Task 10's login flow issues real tokens via JwtIssuer/TokenServiceImpl, which bind
+    # JwtIssuerProperties (issuer/access-token-expiry-minutes/refresh-token-expiry-minutes).
+    # This file replaces main's application.yml wholesale for tests, so those must be
+    # restored here too - otherwise they bind as null/0 and token issuance fails. Values
+    # match main's application.yml.
+    issuer: auth-service
+    # JwtIssuerProperties is @Validated with @NotBlank/@Positive, so all four of these must be
+    # present and non-default here or every @SpringBootTest fails to start. Values match main's
+    # application.yml.
+    audience: auth-platform-client
+    access-token-expiry-minutes: 15
+    refresh-token-expiry-minutes: 43200
+  jwt:
+    # JwtAutoConfiguration fails startup fast if these are blank (see
+    # auth-jwt-lib JwtAutoConfiguration#requireProperty), so they must be restored here
+    # since this file otherwise shadows main's application.yml wholesale.
+    jwks-uri: http://localhost:8080/.well-known/jwks.json
+    expected-issuer: auth-service
+    # left OFF here on purpose, mirroring main's application.yml, so the test suite exercises
+    # the same code path production runs. If you enable it, the value MUST be exactly the
+    # auth-platform.issuer.audience value above or every token fails verification.
+    # expected-audience: auth-platform-client
+  # exercised rather than left to bind null: with no allowed-origins the CORS allow-list is
+  # never populated under test, so a regression in SecurityConfig's origin handling would not
+  # show up here. Mirrors main's application.yml.
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+  # copied verbatim from main's application.yml. Tasks 14/15 bind these; having them present
+  # now means the first WebAuthn test does not fail with a confusing missing-property error
+  # caused by this file shadowing main's wholesale.
+  webauthn:
+    relying-party-id: localhost
+    relying-party-name: Auth Platform
+    origin: http://localhost:3000

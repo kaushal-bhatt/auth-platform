@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-auth-schema
+      author: auth-platform
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS auth

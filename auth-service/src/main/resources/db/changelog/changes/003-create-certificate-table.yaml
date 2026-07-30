@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-certificate-table
+      author: auth-platform
+      changes:
+        - createTable:
+            tableName: certificate
+            schemaName: auth
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: key_id
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: private_key_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: public_key
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+  # Task 17: enforces at most one active=true row at the database level. getActiveKey() is only
+  # JVM-synchronized, so two service instances starting against an empty database can both find
+  # no active key and both attempt to persist their own freshly-generated one as active - each
+  # generates its own random key_id, so the key_id uniqueness constraint above never fires and
+  # both inserts would otherwise succeed. This partial unique index (postgres-specific: it only
+  # indexes rows where active = true, so it constrains "at most one true", not "at most one
+  # value") makes the losing instance's insert fail fast with a unique-constraint violation
+  # instead of silently leaving two active keys in the table. KeysServiceImpl#generateAndPersistKey
+  # catches that violation and re-reads the winning row rather than crashing startup.
+  - changeSet:
+      id: 003-certificate-single-active-key-index
+      author: auth-platform
+      changes:
+        - sql:
+            sql: CREATE UNIQUE INDEX idx_certificate_single_active_key ON auth.certificate (active) WHERE active = true
+      rollback:
+        - sql:
+            sql: DROP INDEX auth.idx_certificate_single_active_key

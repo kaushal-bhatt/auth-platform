@@ -1,0 +1,51 @@
+{
+  "groups": [
+    {
+      "name": "auth-platform.jwt",
+      "type": "com.authplatform.jwt.config.JwtLibProperties",
+      "sourceType": "com.authplatform.jwt.config.JwtLibProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "auth-platform.jwt.jwks-uri",
+      "type": "java.lang.String",
+      "sourceType": "com.authplatform.jwt.config.JwtLibProperties",
+      "description": "URI of the JSON Web Key Set (JWKS) endpoint used to fetch the signing keys for JWT verification. Required; auto-configuration fails startup if this is missing."
+    },
+    {
+      "name": "auth-platform.jwt.expected-issuer",
+      "type": "java.lang.String",
+      "sourceType": "com.authplatform.jwt.config.JwtLibProperties",
+      "description": "Expected value of the JWT 'iss' claim; tokens issued by any other issuer are rejected. Required; auto-configuration fails startup if this is missing."
+    },
+    {
+      "name": "auth-platform.jwt.expected-audience",
+      "type": "java.lang.String",
+      "sourceType": "com.authplatform.jwt.config.JwtLibProperties",
+      "description": "Expected value of the JWT 'aud' claim. Optional: when unset or blank, audience is not enforced and tokens are accepted regardless of their 'aud' claim."
+    },
+    {
+      "name": "auth-platform.jwt.min-refresh-interval-seconds",
+      "type": "java.lang.Long",
+      "sourceType": "com.authplatform.jwt.config.JwtLibProperties",
+      "description": "Minimum number of seconds to wait between JWKS refresh attempts, to avoid hammering the JWKS endpoint on repeated key-lookup misses.",
+      "defaultValue": 60
+    },
+    {
+      "name": "auth-platform.jwt.connect-timeout-millis",
+      "type": "java.lang.Integer",
+      "sourceType": "com.authplatform.jwt.config.JwtLibProperties",
+      "description": "Connect timeout, in milliseconds, used by the HTTP client when fetching the JWKS document.",
+      "defaultValue": 5000
+    },
+    {
+      "name": "auth-platform.jwt.read-timeout-millis",
+      "type": "java.lang.Integer",
+      "sourceType": "com.authplatform.jwt.config.JwtLibProperties",
+      "description": "Read timeout, in milliseconds, used by the HTTP client when fetching the JWKS document.",
+      "defaultValue": 5000
+    }
+  ],
+  "hints": []
+}
