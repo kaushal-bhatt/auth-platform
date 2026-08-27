@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Auth Demo — JWT + Passkeys</title>
+  <meta name="description" content="An interactive, live demonstration of a standards-based JWT + WebAuthn passkey authentication service." />
+  <!-- Inline SVG favicon. Browsers request /favicon.ico by default; declaring one here stops that
+       automatic request (and the 404 it produced) without shipping a binary asset. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M10 14v-4a6 6 0 0 1 12 0v4' fill='none' stroke='%2335d0ba' stroke-width='3'/%3E%3Crect x='6' y='13' width='20' height='14' rx='3' fill='%236d8bff'/%3E%3Ccircle cx='16' cy='20' r='2.6' fill='%230b0d17'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="demo.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>Auth Platform · <strong>Live Demo</strong></span>
+    </div>
+    <div class="topbar-right">
+      <span id="ratelimit-badge" class="pill pill-muted" title="Actions remaining from your network today">— / 5 left today</span>
+      <a class="ghost-link" href="/.well-known/jwks.json" target="_blank" rel="noopener">JWKS ↗</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Try the authentication service, live.</h1>
+      <p class="lede">
+        This page talks to a real Spring Boot identity provider — the same one whose source is on
+        GitHub. Nothing here is faked: every step below is a genuine HTTP call to the service, and
+        the request &amp; response are shown to you in full. Passwords hash with BCrypt, tokens are
+        <strong>RS256</strong> JWTs verified against a standard <strong>JWKS</strong> endpoint, and
+        passkeys use real <strong>WebAuthn</strong> (Touch ID / Windows Hello / a security key).
+      </p>
+      <div class="callout" id="global-note">
+        <span class="callout-ico">i</span>
+        <span>
+          Fresh cloud instance may take ~40&ndash;60s to wake on the first request (free-tier
+          cold start). Actions are limited to <strong>5 per day per network</strong>. Use a throwaway
+          email &amp; password — this is a public demo.
+        </span>
+      </div>
+    </section>
+
+    <ol class="steps">
+      <!-- STEP 1 — Register -->
+      <li class="step" data-step="1">
+        <div class="step-head">
+          <span class="step-num">1</span>
+          <div>
+            <h2>Create an account</h2>
+            <p>Password is BCrypt-hashed server-side (capped at BCrypt's real 72-byte limit).
+              <code>POST /auth/register</code></p>
+          </div>
+        </div>
+        <div class="step-body">
+          <div class="form-row">
+            <label>Email
+              <input type="email" id="email" placeholder="demo-user@example.com" autocomplete="off" />
+            </label>
+            <label>Password
+              <input type="password" id="password" placeholder="a throwaway password" autocomplete="off" />
+            </label>
+          </div>
+          <button class="btn" id="btn-register">Register</button>
+          <div class="io" id="io-register" hidden></div>
+        </div>
+      </li>
+
+      <!-- STEP 2 — Password login -->
+      <li class="step" data-step="2">
+        <div class="step-head">
+          <span class="step-num">2</span>
+          <div>
+            <h2>Log in with the password</h2>
+            <p>Returns an access + refresh token pair. We decode the access token below so you can
+              see the verified claims. <code>POST /auth/login</code></p>
+          </div>
+        </div>
+        <div class="step-body">
+          <button class="btn" id="btn-login">Log in</button>
+          <div class="io" id="io-login" hidden></div>
+          <div class="token-view" id="token-view" hidden>
+            <div class="token-col">
+              <h4>Decoded JWT header</h4>
+              <pre class="jwt" id="jwt-header"></pre>
+            </div>
+            <div class="token-col">
+              <h4>Decoded JWT payload (claims)</h4>
+              <pre class="jwt" id="jwt-payload"></pre>
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <!-- STEP 3 — Register passkey -->
+      <li class="step" data-step="3">
+        <div class="step-head">
+          <span class="step-num">3</span>
+          <div>
+            <h2>Add a passkey</h2>
+            <p>Uses your access token to bind a WebAuthn credential to the account. Your device will
+              prompt for Touch ID / Windows Hello / a security key.
+              <code>POST /passkey/register/init → /complete</code></p>
+          </div>
+        </div>
+        <div class="step-body">
+          <button class="btn" id="btn-passkey-register" disabled>Register a passkey</button>
+          <span class="hint" id="hint-passkey-register">Log in first (step 2) to enable this.</span>
+          <div class="io" id="io-passkey-register" hidden></div>
+        </div>
+      </li>
+
+      <!-- STEP 4 — Passkey login -->
+      <li class="step" data-step="4">
+        <div class="step-head">
+          <span class="step-num">4</span>
+          <div>
+            <h2>Log in with the passkey</h2>
+            <p>No password. The server issues a single-use challenge, your authenticator signs it,
+              and the signature is verified with anti-replay sign-count checks.
+              <code>POST /passkey/login/init → /complete</code></p>
+          </div>
+        </div>
+        <div class="step-body">
+          <button class="btn" id="btn-passkey-login" disabled>Log in with passkey</button>
+          <span class="hint" id="hint-passkey-login">Register a passkey first (step 3).</span>
+          <div class="io" id="io-passkey-login" hidden></div>
+        </div>
+      </li>
+
+      <!-- STEP 5 — Protected call -->
+      <li class="step" data-step="5">
+        <div class="step-head">
+          <span class="step-num">5</span>
+          <div>
+            <h2>Call a protected endpoint</h2>
+            <p>Sends the bearer token to a route guarded by the JWT library. The token is verified by
+              signature (RS256, by <code>kid</code>, against the live JWKS), issuer and expiry before
+              the handler ever runs. <code>GET /passkey</code></p>
+          </div>
+        </div>
+        <div class="step-body">
+          <button class="btn" id="btn-protected" disabled>List my passkeys (authenticated)</button>
+          <span class="hint" id="hint-protected">Log in (step 2 or 4) to get a token first.</span>
+          <div class="io" id="io-protected" hidden></div>
+        </div>
+      </li>
+    </ol>
+
+    <footer class="foot">
+      <a href="/" class="ghost-link">↑ Restart demo</a>
+      <span>Built by Kaushal Bhatt · <a class="ghost-link" id="back-to-portfolio" href="#">← Back to portfolio</a></span>
+    </footer>
+  </main>
+
+  <script src="demo.js"></script>
+</body>
+</html>
