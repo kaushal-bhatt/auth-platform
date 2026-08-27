@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -42,6 +43,29 @@ public class GlobalExceptionHandler {
         log.warn("rejected a request with an unreadable body: exceptionType={}", e.getClass().getName());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(new ErrorResponse(400, "malformed request body"));
+    }
+
+    /**
+     * A request for a path that does not exist is a client error, not a server error.
+     * <p>
+     * Without this handler it fell through to {@link #handleUnexpectedException}, which returned
+     * {@code 500} and logged a full stack trace at ERROR for something as ordinary as a browser
+     * auto-requesting {@code /favicon.ico}. Two things were wrong with that: the status misreported
+     * a missing resource as a server fault, and - because every route here is reachable
+     * unauthenticated - any caller could flood the logs with ERROR-level stack traces just by
+     * requesting nonexistent paths in a loop. That is the same unbounded ERROR-log flooding vector
+     * the passkey ceremonies were already hardened against.
+     * <p>
+     * The requested path is deliberately not echoed back in the response body, and is logged only
+     * at DEBUG: it is caller-controlled text, so reflecting it would make this endpoint a trivial
+     * reflection point and logging it at a routine level would restore the flooding vector in a
+     * quieter form.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException e) {
+        log.debug("no handler for requested path: exceptionType={}", e.getClass().getName());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new ErrorResponse(404, "not found"));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

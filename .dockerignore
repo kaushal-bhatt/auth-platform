@@ -1,0 +1,13 @@
+# Keep the build context small and reproducible — never ship host build output,
+# IDE state, or git internals into the image.
+.git
+.gitignore
+.gitattributes
+.idea
+.gradle
+**/build
+docs
+portfolio
+deploy/*.md
+*.md
+README.md
