@@ -2,6 +2,7 @@ package com.authplatform.auth.exception;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -9,6 +10,7 @@ import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.nio.charset.StandardCharsets;
 
@@ -82,6 +84,25 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().message()).doesNotContain("leaky@example.com");
         assertThat(response.getBody().message()).doesNotContain(rawBody);
         assertThat(response.getBody().message()).doesNotContain("JSON parse error");
+    }
+
+    /**
+     * A request for a nonexistent path is a client error. Without a dedicated handler it fell
+     * through to {@link GlobalExceptionHandler#handleUnexpectedException}: {@code 500} plus a full
+     * stack trace at ERROR for something as routine as a browser auto-requesting
+     * {@code /favicon.ico} - and, since every route is reachable unauthenticated, an unbounded
+     * ERROR-log flooding vector. The caller-supplied path must not be echoed back.
+     */
+    @Test
+    void handlesMissingResourceAsNotFoundWithoutEchoingThePath() {
+        NoResourceFoundException exception =
+            new NoResourceFoundException(HttpMethod.GET, "/favicon.ico");
+
+        ResponseEntity<ErrorResponse> response = handler.handleNoResourceFound(exception);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isEqualTo(new ErrorResponse(404, "not found"));
+        assertThat(response.getBody().message()).doesNotContain("favicon.ico");
     }
 
     @Test

@@ -1,0 +1,22 @@
+# Caddy automatically provisions and renews a real Let's Encrypt TLS certificate
+# for AUTH_DOMAIN, then reverse-proxies to the Spring Boot service. WebAuthn/passkeys
+# REQUIRE https on a real domain, so this TLS termination is what makes the passkey
+# demo work at all once it is public.
+#
+# AUTH_DOMAIN and ACME_EMAIL are supplied as environment variables (see .env.example).
+# The upstream defaults to the linked app container; override UPSTREAM if needed.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$AUTH_DOMAIN} {
+	encode zstd gzip
+
+	# Caddy sets X-Forwarded-For / X-Forwarded-Proto on the way through, which is
+	# exactly what the service's rate limiter reads to identify the real client IP.
+	reverse_proxy {$UPSTREAM:127.0.0.1:8080} {
+		health_uri /health
+		health_interval 30s
+	}
+}

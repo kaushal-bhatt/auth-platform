@@ -16,6 +16,28 @@ instance of auth-service, registers and logs in over real HTTP, and verifies the
 with auth-jwt-lib's real verifier fetching the service's own live `/.well-known/jwks.json` — no
 mocks anywhere in that path.
 
+## Live demo, portfolio & deployment
+
+This repo also ships everything needed to showcase the platform publicly:
+
+- **`auth-service/src/main/resources/static/`** — an interactive **live demo page** served
+  same-origin by the service (so WebAuthn passkeys work without cross-origin friction). It walks a
+  visitor through register → password login → passkey register → passkey login → an authenticated
+  call, showing the real request/response and decoding the JWT at each step.
+- **A per-IP rate limiter** (`com.authplatform.auth.ratelimit`) — off by default so local dev and
+  tests are unaffected; enable it for a public deployment with
+  `AUTH_PLATFORM_RATELIMIT_ENABLED=true` (defaults to 5 actions per IP per 24h). It is a demo abuse
+  guard, not a security control — see its javadoc.
+- **`portfolio/`** — a standalone, dependency-free HTML/CSS/JS portfolio site that features the
+  platform and links to the live demo. Edit the `CONFIG` block at the top of `portfolio/script.js`.
+- **`Dockerfile`** + **`deploy/`** — a container image and a full **AWS Free-Tier (ECS-on-EC2)**
+  deployment kit (task definition, Caddy auto-HTTPS, env template). See
+  [`deploy/DEPLOY-AWS.md`](deploy/DEPLOY-AWS.md).
+
+> To exercise the built-in demo page **locally**, set `AUTH_PLATFORM_WEBAUTHN_ORIGIN=http://localhost:8080`
+> (the page is served from `:8080`, whereas the default origin targets the `:3000` manual-test flow
+> described later). Password register/login work regardless of that setting.
+
 ## Prerequisites
 
 - **Java 21.**

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaushal Bhatt — Senior Backend Engineer</title>
+  <meta name="description" content="Senior Backend Engineer with 7 years building high-throughput, event-driven microservices in fintech and crypto custody. Java, Spring Boot, Kafka, AWS. Open to EU relocation." />
+  <meta property="og:title" content="Kaushal Bhatt — Senior Backend Engineer" />
+  <meta property="og:description" content="7 years of Java, Spring Boot, Kafka and AWS in regulated fintech. Try my JWT + passkey authentication platform, live." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <a href="#top" class="logo">KB<span>.</span></a>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="#about">About</a>
+      <a href="#experience">Experience</a>
+      <a href="#skills">Skills</a>
+      <a href="#project">Project</a>
+      <a href="#contact">Contact</a>
+      <a href="#" class="nav-cta" data-demo-link>Live Demo &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" id="top">
+    <div class="hero-inner">
+      <p class="eyebrow">Senior Backend Engineer &middot; 7 years</p>
+      <h1>Hi, I'm <span class="grad">Kaushal Bhatt</span>.<br />I build backends that money runs on.</h1>
+      <p class="hero-sub">
+        I design and operate <strong>high-throughput, event-driven microservices</strong> in regulated
+        fintech, crypto custody and e-commerce &mdash; Java, Spring Boot, Apache Kafka and AWS.
+        Currently building the wallet &amp; custody platform at <strong>RockWallet</strong>, where I
+        authored the annotation-based JWT + passkey auth framework now used across every service.
+      </p>
+      <p class="hero-sub hero-sub-tight">
+        Below is that same expertise, standalone and open source &mdash; an identity provider you can
+        actually log into right now, with a real passkey.
+      </p>
+      <div class="hero-actions">
+        <a href="#" class="btn btn-primary" data-demo-link>Try the live auth demo &rarr;</a>
+        <a href="#" class="btn btn-ghost" data-github-link>View source</a>
+        <a href="#" class="btn btn-ghost" data-resume-link>R&eacute;sum&eacute;</a>
+      </div>
+      <div class="hero-meta">
+        <span class="meta-item">Dehradun, India</span>
+        <span class="meta-sep">&middot;</span>
+        <span class="meta-item meta-hl">Open to EU relocation &mdash; Blue Card eligible</span>
+      </div>
+      <div class="status-chip" id="demo-status">
+        <span class="status-dot warming"></span>
+        <span id="demo-status-text">Checking live demo status&hellip;</span>
+      </div>
+    </div>
+
+    <!-- Terminal card -->
+    <aside class="term" aria-hidden="true">
+      <div class="term-bar"><span></span><span></span><span></span><em>~/auth-platform</em></div>
+      <pre class="term-body"><code><span class="c-com"># verify a token the way a real service does</span>
+<span class="c-op">POST</span> /auth/login            <span class="c-ok">&rarr; 200</span>  access + refresh (RS256)
+<span class="c-op">GET</span>  /.well-known/jwks.json <span class="c-ok">&rarr; 200</span>  public keys, RFC 7517
+<span class="c-op">POST</span> /passkey/login/complete<span class="c-ok">&rarr; 200</span>  WebAuthn, no password
+
+<span class="c-com"># signature ok  issuer ok  exp ok  sign-count ok</span>
+<span class="c-hl">verified</span> = true</code></pre>
+    </aside>
+  </header>
+
+  <!-- METRICS -->
+  <section class="metrics" aria-label="Career highlights">
+    <div class="metric"><span class="metric-n">7</span><span class="metric-l">years building backends</span></div>
+    <div class="metric"><span class="metric-n">57%</span><span class="metric-l">latency reduction delivered</span></div>
+    <div class="metric"><span class="metric-n">99.9%</span><span class="metric-l">uptime on regulated systems</span></div>
+    <div class="metric"><span class="metric-n">1M+</span><span class="metric-l">daily transactions handled</span></div>
+  </section>
+
+  <main>
+    <!-- ABOUT -->
+    <section class="section" id="about">
+      <div class="section-head">
+        <span class="section-tag">01 &mdash; About</span>
+        <h2>Security and scale, in systems that can't fail quietly.</h2>
+      </div>
+      <div class="about-grid">
+        <div class="about-text">
+          <p>
+            I'm a Senior Backend Engineer with <strong>7 years</strong> designing and operating
+            event-driven microservices where correctness is non-negotiable &mdash; crypto custody,
+            KYC/AML pipelines, payment flows, and fraud detection processing millions of transactions
+            a day.
+          </p>
+          <p>
+            My work sits at the intersection of <strong>distributed systems and security</strong>:
+            Kafka/MSK event backbones, service-to-service authentication, secrets management, and the
+            unglamorous cryptographic plumbing that keeps accounts safe. I care about the failure
+            paths as much as the happy path &mdash; circuit breakers, uniform error responses,
+            anti-replay, fail-closed configuration.
+          </p>
+          <p>
+            At <strong>RockWallet</strong> I own services inside a 17-microservice monorepo and wrote
+            the platform-wide JWT + WebAuthn authentication framework. The
+            <a href="#project" class="inline-link">auth-platform project below</a> is that domain
+            expertise rebuilt standalone and open source &mdash; and it's live, so you can judge it
+            yourself rather than take my word for it.
+          </p>
+          <p class="relocation-note">
+            <strong>Open to EU relocation.</strong> EU Blue Card eligible &middot; English B2 &middot;
+            German A1&ndash;A2 (in progress).
+          </p>
+        </div>
+        <ul class="about-facts">
+          <li><span class="fact-k">Now</span><span class="fact-v">RockWallet &mdash; crypto custody</span></li>
+          <li><span class="fact-k">Focus</span><span class="fact-v">Microservices &middot; Kafka &middot; Auth</span></li>
+          <li><span class="fact-k">Core stack</span><span class="fact-v">Java 21 &middot; Spring Boot &middot; AWS</span></li>
+          <li><span class="fact-k">Domains</span><span class="fact-v">Fintech &middot; Crypto &middot; E-commerce</span></li>
+          <li><span class="fact-k">Location</span><span class="fact-v">Dehradun, India</span></li>
+          <li><span class="fact-k">Status</span><span class="fact-v">Open to EU roles</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- EXPERIENCE -->
+    <section class="section" id="experience">
+      <div class="section-head">
+        <span class="section-tag">02 &mdash; Experience</span>
+        <h2>Where I've built.</h2>
+      </div>
+
+      <ol class="timeline">
+        <li class="tl-item">
+          <div class="tl-marker"><span class="tl-dot current"></span></div>
+          <div class="tl-body">
+            <div class="tl-head">
+              <h3>Senior Backend Engineer <span class="tl-co">&mdash; RockWallet (Bayes Fintech Inc.)</span></h3>
+              <span class="tl-date current-date">Dec 2024 &ndash; Present</span>
+            </div>
+            <p class="tl-ctx">Regulated crypto wallet &amp; custody platform &mdash; Java 21, Spring Boot, Kafka, AWS.</p>
+            <ul class="tl-points">
+              <li><strong>Designed a custom annotation-based JWT authentication framework</strong> supporting passkey/WebAuthn and service-to-service auth &mdash; adopted platform-wide across every microservice.</li>
+              <li>Own services in a <strong>17-microservice monorepo</strong> backed by 10 shared internal libraries (auth, config, messaging, error handling), sharply cutting duplication.</li>
+              <li>Built a <strong>zero-downtime configuration server</strong> enabling runtime config changes with no redeploys.</li>
+              <li>Designed and operate the <strong>Kafka / AWS MSK (TLS/SSL)</strong> backbone powering wallet, KYC, payments and notification services.</li>
+              <li>Integrated <strong>Fireblocks</strong> custody and CoinMarketCap market data; implemented cross-chain transaction syncing and fiat payment flows.</li>
+              <li>Implemented KYC/AML onboarding plus internal admin/ops tooling for compliance teams.</li>
+              <li>Lead on-call and incident response, sustaining <strong>99.9% uptime</strong>; improved reliability 25% via circuit breakers, failover and proactive alerting.</li>
+            </ul>
+            <div class="tl-tags"><span>Java 21</span><span>Spring Boot</span><span>Kafka / MSK</span><span>WebAuthn</span><span>Fireblocks</span><span>AWS</span></div>
+          </div>
+        </li>
+
+        <li class="tl-item">
+          <div class="tl-marker"><span class="tl-dot"></span></div>
+          <div class="tl-body">
+            <div class="tl-head">
+              <h3>Senior Software Engineer <span class="tl-co">&mdash; EPAM Systems (client: ACT / Thomson Reuters)</span></h3>
+              <span class="tl-date">Feb 2024 &ndash; Dec 2024</span>
+            </div>
+            <p class="tl-ctx">Backend for an LLM-integrated content-processing platform (GenAI in editorial tooling).</p>
+            <ul class="tl-points">
+              <li>Built runtime Word-document generation with a summarization feature that cut the operations team's manual load <strong>from 100% to 10%</strong>.</li>
+              <li>Led a service-oriented architecture (SOAP/REST) effort that improved uptime by 25%.</li>
+              <li>Maintained <strong>95%+ automated test coverage</strong> (JUnit, Mockito), reducing production bugs 20%.</li>
+              <li>Designed a structured mentorship program, cutting junior onboarding time by 40%.</li>
+            </ul>
+            <div class="tl-tags"><span>Java</span><span>Spring</span><span>GenAI integration</span><span>SOAP/REST</span></div>
+          </div>
+        </li>
+
+        <li class="tl-item">
+          <div class="tl-marker"><span class="tl-dot"></span></div>
+          <div class="tl-body">
+            <div class="tl-head">
+              <h3>Java Kafka Developer <span class="tl-co">&mdash; Ibosstech Solutions (SCALONG)</span></h3>
+              <span class="tl-date">Jul 2022 &ndash; Dec 2023</span>
+            </div>
+            <p class="tl-ctx">Monolith-to-microservices migration and real-time risk systems on AWS.</p>
+            <ul class="tl-points">
+              <li><strong>Led a team of 6</strong> migrating a monolith to microservices on AWS with Kafka-based async processing, enabling elastic scaling to 10,000+ daily transactions.</li>
+              <li>Built a real-time <strong>ML fraud/risk pipeline</strong> (XGBoost on AWS SageMaker) consuming Kafka streams for sub-second decisioning &mdash; cut manual inspection 70%, raised fraud detection 55%.</li>
+              <li>Reduced system latency <strong>57%</strong> through query optimization, async processing and Redis caching.</li>
+              <li>Delivered 8 microservices end to end, plus CloudWatch/Prometheus monitoring and 24/7 on-call.</li>
+              <li><em>Price Centralisation (KSA):</em> Kafka-based distributed pricing engine for multi-warehouse retail with currency conversion and nearest-warehouse routing &mdash; lifted sales 15&ndash;38%.</li>
+              <li><em>Claims Management &amp; RISK:</em> led claims microservice design and a SageMaker POC that increased fraud-case detection 38%.</li>
+            </ul>
+            <div class="tl-tags"><span>Kafka</span><span>AWS SageMaker</span><span>Redis</span><span>Microservices</span><span>Team lead</span></div>
+          </div>
+        </li>
+
+        <li class="tl-item">
+          <div class="tl-marker"><span class="tl-dot"></span></div>
+          <div class="tl-body">
+            <div class="tl-head">
+              <h3>Software Development Engineer <span class="tl-co">&mdash; Boutiqaat</span></h3>
+              <span class="tl-date">Jan 2022 &ndash; Jul 2022</span>
+            </div>
+            <ul class="tl-points">
+              <li>Led migration of a Magento application to Java microservices.</li>
+              <li>Built a Kafka event-driven architecture centralizing pricing across the KSA region, handling <strong>1M+ transactions daily</strong> with accurate cross-region pricing and inventory.</li>
+              <li>CI/CD pipelines that cut deployment time 50%; contributed to a 38% Middle East sales increase.</li>
+            </ul>
+            <div class="tl-tags"><span>Java</span><span>Kafka</span><span>E-commerce</span><span>CI/CD</span></div>
+          </div>
+        </li>
+
+        <li class="tl-item">
+          <div class="tl-marker"><span class="tl-dot"></span></div>
+          <div class="tl-body">
+            <div class="tl-head">
+              <h3>Software Development Engineer <span class="tl-co">&mdash; Lenskart</span></h3>
+              <span class="tl-date">Nov 2019 &ndash; Jan 2022</span>
+            </div>
+            <ul class="tl-points">
+              <li>Built order-processing microservices and REST APIs with Java 8, Spring Boot, Kafka and MySQL.</li>
+              <li>Automated order sync with third-party inventory (Unicommerce) over Kafka, cutting delivery time <strong>from 7 days to 3</strong>.</li>
+              <li>Built refund automation driven by order status, cutting refund-ops workload 40%.</li>
+              <li><strong>Best performer of the year</strong>; won the "Knight Award" three quarters running.</li>
+            </ul>
+            <div class="tl-tags"><span>Java 8</span><span>Spring Boot</span><span>Kafka</span><span>MySQL</span></div>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="section" id="skills">
+      <div class="section-head">
+        <span class="section-tag">03 &mdash; Skills</span>
+        <h2>What I work with.</h2>
+      </div>
+      <div class="skills">
+        <div class="skill-group">
+          <h3>Languages</h3>
+          <ul><li>Java 8 / 11 / 17 / 21</li><li>SQL</li><li>Python</li><li>JavaScript</li></ul>
+        </div>
+        <div class="skill-group">
+          <h3>Frameworks</h3>
+          <ul><li>Spring Boot 3.5</li><li>Spring 6</li><li>Spring Security</li><li>Spring MVC</li><li>Hibernate / JPA</li></ul>
+        </div>
+        <div class="skill-group">
+          <h3>Messaging &amp; Streaming</h3>
+          <ul><li>Apache Kafka</li><li>AWS MSK (TLS/SSL)</li><li>Kafka Streams</li><li>SQS / SNS</li><li>RabbitMQ</li></ul>
+        </div>
+        <div class="skill-group">
+          <h3>Cloud &amp; DevOps</h3>
+          <ul><li>AWS (EC2, S3, MSK, IAM)</li><li>Docker</li><li>Kubernetes</li><li>Terraform</li><li>Jenkins</li><li>GitHub Actions</li></ul>
+        </div>
+        <div class="skill-group">
+          <h3>Security &amp; Auth</h3>
+          <ul><li>JWT / OAuth2</li><li>WebAuthn / Passkeys</li><li>Service-to-service auth</li><li>HashiCorp Vault</li><li>RS256 &middot; JWKS</li></ul>
+        </div>
+        <div class="skill-group">
+          <h3>Data &amp; Caching</h3>
+          <ul><li>PostgreSQL</li><li>MySQL</li><li>MongoDB</li><li>Redis</li><li>DynamoDB</li><li>Flyway</li></ul>
+        </div>
+        <div class="skill-group">
+          <h3>Observability</h3>
+          <ul><li>Datadog</li><li>CloudWatch</li><li>ELK Stack</li><li>Prometheus</li><li>Grafana</li><li>NewRelic</li></ul>
+        </div>
+        <div class="skill-group">
+          <h3>Domain</h3>
+          <ul><li>Crypto custody</li><li>Fireblocks</li><li>KYC / AML</li><li>Payment flows</li><li>Fraud detection</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURED PROJECT -->
+    <section class="section" id="project">
+      <div class="section-head">
+        <span class="section-tag">04 &mdash; Featured project</span>
+        <h2>auth-platform</h2>
+        <p class="section-lede">
+          A generic, vendor-neutral JWT + passkey authentication platform &mdash; the standalone,
+          open-source expression of the auth framework I built at RockWallet. Two independent modules,
+          proven to interoperate over nothing but a public JWKS HTTP contract.
+        </p>
+      </div>
+
+      <div class="project-card">
+        <div class="project-top">
+          <div class="module">
+            <h3>auth-service</h3>
+            <p>A runnable Spring Boot identity provider: registration, password &amp; passkey login,
+              refresh-token rotation, and the JWKS endpoint itself.</p>
+          </div>
+          <div class="module">
+            <h3>auth-jwt-lib</h3>
+            <p>An importable library any Spring service adds to verify RS256 tokens against a
+              standard RFC 7517 JWKS endpoint &mdash; no coupling to the issuer.</p>
+          </div>
+        </div>
+
+        <!-- Architecture diagram -->
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 760 250" class="diagram" role="img" aria-label="Architecture: browser to auth-service to a protected service verifying tokens via JWKS">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#6d8bff" /><stop offset="1" stop-color="#35d0ba" />
+              </linearGradient>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L8,3 L0,6 Z" fill="#6b7392" />
+              </marker>
+            </defs>
+
+            <rect x="20" y="90" width="150" height="70" rx="12" class="node" />
+            <text x="95" y="120" class="node-t">Browser</text>
+            <text x="95" y="140" class="node-s">password / passkey</text>
+
+            <rect x="305" y="30" width="170" height="80" rx="12" class="node node-accent" />
+            <text x="390" y="60" class="node-t">auth-service</text>
+            <text x="390" y="80" class="node-s">issues RS256 JWTs</text>
+            <text x="390" y="96" class="node-s">signs with rotating keys</text>
+
+            <rect x="330" y="165" width="120" height="55" rx="12" class="node" />
+            <text x="390" y="190" class="node-t small">JWKS</text>
+            <text x="390" y="207" class="node-s">public keys</text>
+
+            <rect x="590" y="90" width="150" height="70" rx="12" class="node" />
+            <text x="665" y="116" class="node-t small">Your service</text>
+            <text x="665" y="135" class="node-s">+ auth-jwt-lib</text>
+
+            <line x1="170" y1="120" x2="300" y2="80" stroke="#6b7392" stroke-width="1.6" marker-end="url(#arrow)" />
+            <text x="235" y="90" class="edge-t">login</text>
+            <line x1="475" y1="90" x2="585" y2="118" stroke="#6b7392" stroke-width="1.6" marker-end="url(#arrow)" />
+            <text x="540" y="100" class="edge-t">Bearer JWT</text>
+            <line x1="590" y1="140" x2="455" y2="195" stroke="#6b7392" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)" />
+            <text x="540" y="185" class="edge-t">fetch keys</text>
+            <line x1="390" y1="165" x2="390" y2="112" stroke="#6b7392" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)" />
+          </svg>
+        </div>
+
+        <div class="project-actions">
+          <a href="#" class="btn btn-primary" data-demo-link>Launch live demo &rarr;</a>
+          <a href="#" class="btn btn-ghost" data-github-link>Source code</a>
+          <a href="#" class="btn btn-ghost" data-readme-link>Read the README</a>
+        </div>
+        <p class="project-note">
+          The demo runs on a free-tier cloud instance and may take ~40&ndash;60s to wake on first hit.
+          Public demo actions are rate-limited to 5 per day per network.
+        </p>
+      </div>
+
+      <h3 class="sub-head">The security decisions I'm proud of</h3>
+      <p class="sub-lede">Not buzzwords &mdash; enforced behaviours, each backed by tests in the repo.</p>
+      <div class="feature-grid">
+        <article class="feature">
+          <div class="feature-ico">&#128273;</div>
+          <h3>RS256 + JWKS, strictly</h3>
+          <p>Asymmetric signing. The verifier resolves keys by <code>kid</code> from a standard JWKS
+            document and rejects any token whose algorithm isn't exactly RS256 (RFC 8725).</p>
+        </article>
+        <article class="feature">
+          <div class="feature-ico">&#128072;</div>
+          <h3>Real WebAuthn passkeys</h3>
+          <p>Touch ID / Windows Hello / security keys via webauthn4j. Single-use challenges and
+            sign-count anti-replay guard against cloned authenticators.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-ico">&#128260;</div>
+          <h3>Refresh rotation, race-safe</h3>
+          <p>Redeeming a refresh token takes a <code>SELECT ... FOR UPDATE</code> row lock, so
+            concurrent redemptions serialise and exactly one can win. Tokens stored only as SHA-256
+            digests.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-ico">&#128737;</div>
+          <h3>Keys encrypted at rest</h3>
+          <p>RSA private signing keys are AES-256-GCM encrypted with a secret injected at runtime
+            &mdash; the app fails closed on startup if it's missing or malformed.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-ico">&#128371;</div>
+          <h3>No enumeration oracles</h3>
+          <p>Login and passkey paths return uniform failures &mdash; a caller can't distinguish "wrong
+            password" from "no such user", nor enumerate registered emails.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-ico">&#9989;</div>
+          <h3>Proven interop, no mocks</h3>
+          <p>A test boots the real service on a real port, logs in over real HTTP, and verifies the
+            token with the real library fetching the live JWKS &mdash; zero mocks in that path.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- EDUCATION & CERTS -->
+    <section class="section" id="education">
+      <div class="section-head">
+        <span class="section-tag">05 &mdash; Education &amp; certifications</span>
+        <h2>Background.</h2>
+      </div>
+      <div class="edu-grid">
+        <div class="edu-card">
+          <h3>B.Tech, Computer Science</h3>
+          <p class="edu-org">Swami Rama Himalayan University (SRHU)</p>
+          <p class="edu-meta">Dehradun, India &middot; 2015 &ndash; 2019</p>
+        </div>
+        <div class="edu-card">
+          <h3>Certifications &amp; training</h3>
+          <ul class="edu-list">
+            <li>Oracle Java SE 8 Programmer</li>
+            <li>Architecting on AWS (AWS-authorized)</li>
+            <li>DevOps &amp; CI/CD Foundations</li>
+          </ul>
+        </div>
+        <div class="edu-card">
+          <h3>Languages</h3>
+          <ul class="edu-list">
+            <li>English &mdash; Professional (B2)</li>
+            <li>Hindi &mdash; Native</li>
+            <li>German &mdash; A1&ndash;A2 (in progress)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="section contact" id="contact">
+      <div class="section-head center">
+        <span class="section-tag">06 &mdash; Contact</span>
+        <h2>Let's talk.</h2>
+        <p class="section-lede">
+          Open to <strong>Senior Backend Engineer</strong> roles across the EU &mdash; Blue Card
+          eligible and ready to relocate. Also happy to talk about auth, Kafka, or anything hard.
+        </p>
+      </div>
+      <div class="contact-actions">
+        <a href="#" class="btn btn-primary" data-email-link>Email me</a>
+        <a href="#" class="btn btn-ghost" data-linkedin-link>LinkedIn</a>
+        <a href="#" class="btn btn-ghost" data-github-link>GitHub</a>
+      </div>
+      <p class="contact-detail" data-contact-detail></p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>&copy; <span id="year"></span> Kaushal Bhatt &mdash; Senior Backend Engineer</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
