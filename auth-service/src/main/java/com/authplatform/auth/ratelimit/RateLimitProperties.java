@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Deliberately <b>disabled by default</b>: local development and the whole test suite must behave
  * exactly as before, so nothing is throttled unless a deployment explicitly opts in by setting
  * {@code auth-platform.rate-limit.enabled=true} (in production this is supplied as the environment
- * variable {@code AUTH_PLATFORM_RATELIMIT_ENABLED=true}). This exists to stop a public showcase
+ * variable {@code AUTH_PLATFORM_RATE_LIMIT_ENABLED=true}). This exists to stop a public showcase
  * deployment from being hammered - it is a demo guard rail, not a security control, and is not a
  * substitute for the real per-account lockout/throttling gaps documented in the README.
  */

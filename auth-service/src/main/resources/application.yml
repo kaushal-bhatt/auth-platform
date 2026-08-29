@@ -1,9 +1,22 @@
 server:
   port: 8080
+  # Caddy terminates TLS and proxies to this service, so what the app sees is plain
+  # http on an internal host. Without this, Spring rebuilds request URLs from that
+  # internal view, and a same-origin browser call from the demo page looks
+  # cross-origin to the CORS filter and is rejected. FRAMEWORK makes Spring honour
+  # the X-Forwarded-* headers the proxy already sets.
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: auth-service
+  # This is a stateless bearer-token api - SecurityConfig disables both httpBasic and
+  # formLogin - so Spring Boot's default in-memory user is never consulted. Excluding
+  # its autoconfiguration stops it being created at all, and with it the "Using
+  # generated security password" line that would otherwise sit in production logs.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
     url: jdbc:postgresql://localhost:5433/authplatform
     username: authplatform

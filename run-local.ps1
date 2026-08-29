@@ -63,7 +63,7 @@ $env:AUTH_PLATFORM_ISSUER_KEY_PROTECTION_SECRET = $secret
 # Serve the demo page from :8080 AND accept WebAuthn from that same origin.
 $env:AUTH_PLATFORM_WEBAUTHN_ORIGIN = "http://localhost:8080"
 if ($RateLimit) {
-    $env:AUTH_PLATFORM_RATELIMIT_ENABLED = "true"
+    $env:AUTH_PLATFORM_RATE_LIMIT_ENABLED = "true"
     Write-Host "  Rate limiter: ON (5 actions per IP per day)." -ForegroundColor Yellow
 } else {
     Write-Host "  Rate limiter: OFF (pass -RateLimit to enable)." -ForegroundColor DarkGray

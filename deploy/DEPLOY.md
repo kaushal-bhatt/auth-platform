@@ -50,7 +50,9 @@ Visitor ──HTTPS──▶  Caddy (:443, auto Let's Encrypt)  ──▶  auth-
    account, not a setting change.
 
 3. Compute → Instances → **Create instance**:
-   - **Image:** Ubuntu 22.04 (or Oracle Linux 9 — see the firewall note in Step 2, it differs).
+   - **Image:** Canonical Ubuntu 24.04 — the plain image, *not* "Minimal" (Minimal strips out
+     packages this guide needs, `netfilter-persistent` among them). Oracle Linux 9 also works, but
+     its firewall step differs — see Step 2.
    - **Shape:** change it to **Ampere / `VM.Standard.A1.Flex`** — the ARM shape is the one that is
      Always Free. The default x86 micro shape is much weaker.
    - **Size it 2 OCPU / 4 GB.** ⚠️ *Not* the full 4 OCPU / 24 GB, even though the free allocation
@@ -145,7 +147,7 @@ Then edit `.env` and set, at minimum:
 | `ACME_EMAIL` | your email (Let's Encrypt expiry notices) |
 | `AUTH_PLATFORM_ISSUER_KEY_PROTECTION_SECRET` | the `openssl rand -base64 32` output |
 | `POSTGRES_PASSWORD` **and** `SPRING_DATASOURCE_PASSWORD` | the same strong password |
-| `AUTH_PLATFORM_WEBAUTHN_RELYINGPARTYID` | `auth.yourdomain.com` (no scheme) |
+| `AUTH_PLATFORM_WEBAUTHN_RELYING_PARTY_ID` | `auth.yourdomain.com` (no scheme) |
 | `AUTH_PLATFORM_WEBAUTHN_ORIGIN` | `https://auth.yourdomain.com` |
 
 ⚠️ **Keep `AUTH_PLATFORM_ISSUER_KEY_PROTECTION_SECRET` safe and stable.** RSA signing keys are
@@ -236,7 +238,7 @@ which fits 2 GB with room for the OS; below that, raise the swap and lower the `
 |---|---|
 | Connection times out | Ingress open in only *one* of the two firewalls — recheck both halves of Step 2 |
 | Caddy cannot get a certificate | DNS not propagated yet, or port 80 blocked (the ACME challenge needs it) |
-| Passkey buttons error in the browser | `AUTH_PLATFORM_WEBAUTHN_ORIGIN` / `RELYINGPARTYID` do not match the URL you loaded |
+| Passkey buttons error in the browser | `AUTH_PLATFORM_WEBAUTHN_ORIGIN` / `RELYING_PARTY_ID` do not match the URL you loaded |
 | `auth-service` restarts in a loop | Wrong DB password — `POSTGRES_PASSWORD` and `SPRING_DATASOURCE_PASSWORD` must match |
 | Build killed partway through | Out of memory during Gradle — add the swap file from Step 4 |
 | "Out of host capacity" creating the instance | Transient A1 shortage in that region; retry or change availability domain |
