@@ -121,17 +121,33 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * The client's identity for limiting purposes. Behind a single trusted reverse proxy the real
-     * client IP is the first entry of {@code X-Forwarded-For}; otherwise the socket peer address is
-     * used. {@code X-Forwarded-For} can list several hops ({@code client, proxy1, proxy2}); the
-     * left-most is the originating client.
+     * The client's identity for limiting purposes. The preference order here is deliberate, and
+     * {@code X-Forwarded-For} is second for two independent reasons.
+     * <p>
+     * First, a proxy <i>appends</i> to {@code X-Forwarded-For}, so its left-most entry is whatever
+     * the caller chose to send. Keying on that lets any client mint a fresh identity per request
+     * and ignore the limit entirely. The right-most entry - the hop written by the nearest trusted
+     * proxy - is the one a caller cannot forge.
+     * <p>
+     * Second, {@code server.forward-headers-strategy} installs Spring's
+     * {@code ForwardedHeaderFilter}, which consumes and then REMOVES the {@code X-Forwarded-*}
+     * headers. This filter runs after it and would see none of them, silently falling through to
+     * {@link HttpServletRequest#getRemoteAddr()} - the proxy's own address, identical for every
+     * visitor, collapsing everyone into one shared bucket.
+     * <p>
+     * So {@code X-Real-IP} comes first: the Caddyfile sets it with {@code header_up}, which
+     * overwrites rather than appends, and nothing downstream strips it.
      */
     private String resolveClientKey(HttpServletRequest request) {
         if (properties.isTrustForwardedFor()) {
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) {
+                return realIp.trim();
+            }
             String forwarded = request.getHeader("X-Forwarded-For");
             if (forwarded != null && !forwarded.isBlank()) {
-                int comma = forwarded.indexOf(',');
-                return (comma >= 0 ? forwarded.substring(0, comma) : forwarded).trim();
+                int lastComma = forwarded.lastIndexOf(',');
+                return (lastComma >= 0 ? forwarded.substring(lastComma + 1) : forwarded).trim();
             }
         }
         return request.getRemoteAddr();

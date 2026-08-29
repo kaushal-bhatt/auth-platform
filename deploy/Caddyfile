@@ -13,9 +13,14 @@
 {$AUTH_DOMAIN} {
 	encode zstd gzip
 
-	# Caddy sets X-Forwarded-For / X-Forwarded-Proto on the way through, which is
-	# exactly what the service's rate limiter reads to identify the real client IP.
 	reverse_proxy {$UPSTREAM:127.0.0.1:8080} {
+		# The rate limiter keys on this. X-Forwarded-For cannot be used for it:
+		# Caddy APPENDS to that header, so its left-most entry is whatever the
+		# caller sent, and Spring's ForwardedHeaderFilter strips the X-Forwarded-*
+		# headers before the limiter runs anyway. header_up OVERWRITES, and
+		# {remote_host} is the real TCP peer, so this value is not client-settable.
+		header_up X-Real-IP {remote_host}
+
 		health_uri /health
 		health_interval 30s
 	}

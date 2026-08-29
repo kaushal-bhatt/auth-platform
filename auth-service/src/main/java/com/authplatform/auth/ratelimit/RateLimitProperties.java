@@ -30,11 +30,11 @@ public class RateLimitProperties {
     private long windowHours = 24;
 
     /**
-     * Trust the first hop of {@code X-Forwarded-For} for the client IP. Correct when the service
-     * sits behind exactly one reverse proxy / load balancer (Caddy, an ALB) that appends the real
-     * client IP - which is the deployment topology in {@code deploy/DEPLOY.md}. If the service
-     * were ever exposed directly to clients this should be {@code false}, since a client could then
-     * spoof the header to dodge the limit.
+     * Trust the reverse proxy's client-IP headers ({@code X-Real-IP}, then the right-most entry of
+     * {@code X-Forwarded-For}) instead of the socket peer address. Correct when the service sits
+     * behind a trusted proxy that sets them - the topology in {@code deploy/DEPLOY.md}. Set this
+     * {@code false} if the service is ever exposed directly to clients, where both headers are
+     * attacker-supplied and keying on them would let anyone mint a new identity per request.
      */
     private boolean trustForwardedFor = true;
 
