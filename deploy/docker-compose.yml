@@ -67,6 +67,10 @@ services:
       - "443:443"
     environment:
       AUTH_DOMAIN: ${AUTH_DOMAIN}
+      # Substituted here rather than left to the Caddyfile's own default: an
+      # unset variable falls back, but an EMPTY one does not, and an empty site
+      # address stops Caddy from starting at all.
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-localhost}
       ACME_EMAIL: ${ACME_EMAIL}
       UPSTREAM: "auth-service:8080"
     volumes:

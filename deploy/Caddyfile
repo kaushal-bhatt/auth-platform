@@ -10,6 +10,22 @@
 	email {$ACME_EMAIL}
 }
 
+# Holding block for the bare domain until the portfolio is deployed there. Both
+# names already resolve to this host, and without a block for them Caddy has no
+# certificate to offer, so anyone typing the bare domain gets a TLS error.
+#
+# The redirect is a 302, NOT `permanent`. A 301 is cached hard by browsers, so
+# every visitor who arrived during this window would keep being bounced to the
+# demo from their own cache long after the portfolio went live.
+#
+# ROOT_DOMAIN falls back to `localhost` deliberately: Caddy serves that with an
+# internal certificate and never contacts Let's Encrypt, so a deployment that
+# does not set it gets a harmless no-op instead of a cert-failure restart loop
+# that would take AUTH_DOMAIN down with it.
+{$ROOT_DOMAIN:localhost}, www.{$ROOT_DOMAIN:localhost} {
+	redir https://{$AUTH_DOMAIN}{uri}
+}
+
 {$AUTH_DOMAIN} {
 	encode zstd gzip
 
