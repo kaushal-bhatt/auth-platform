@@ -1,0 +1,134 @@
+# =============================================================================
+#  Push to main  ->  test  ->  build image  ->  push to GHCR  ->  roll out.
+#
+#  This runs on a SELF-HOSTED runner (the development machine), not on
+#  GitHub's. Two consequences worth knowing:
+#
+#    * Deploys only happen while that machine is on and its runner service is
+#      running. A push made while it is off stays queued until it comes back.
+#    * The image is built here and shipped to the server as a finished
+#      artifact, so the server never compiles anything. A deploy is a pull.
+# =============================================================================
+name: Deploy
+
+# Deliberately NO `pull_request` trigger. This repository is public and the
+# runner is a personal machine, so a pull_request trigger would let anyone
+# execute arbitrary code on it by opening a PR. `push` to main can only be
+# done by someone who already has write access.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One rollout at a time, and never cancel one halfway: a partially applied
+# deploy is worse than a queued one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write # lets the built-in GITHUB_TOKEN push to ghcr.io
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/auth-service
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, windows]
+    timeout-minutes: 45
+
+    # Windows PowerShell, explicitly. NOT `bash`: on this runner the `bash` on
+    # PATH is WSL's (C:\Windows\System32\bash.exe), which sees a different
+    # filesystem (/mnt/c/...) and would break every path below.
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Puts JDK 21 in the runner's tool cache and points JAVA_HOME at it for
+      # this job only. The machine's own JAVA_HOME (17) is left untouched.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # No actions/cache step here, on purpose. The runner is self-hosted, so
+      # ~/.gradle and the Gradle daemon already survive between runs - which is
+      # faster than uploading and re-downloading a cache archive every time.
+      # gradle.properties already sets org.gradle.caching=true.
+      - name: Test
+        run: .\gradlew.bat build
+
+      # The token goes through the environment rather than being interpolated
+      # into the script body, so it never lands in a file on the runner's disk.
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $env:GHCR_TOKEN | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if ($LASTEXITCODE -ne 0) { throw "docker login failed ($LASTEXITCODE)" }
+
+      # Plain `docker build` - BuildKit is the default in Docker 29, so the
+      # `--mount=type=cache` lines in the Dockerfile keep the Gradle dependency
+      # cache warm across builds, and the daemon keeps the layer cache. The sha
+      # tag is what actually gets deployed; `latest` is a convenience pointer.
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 `
+            -t "${{ env.IMAGE }}:${{ github.sha }}" `
+            -t "${{ env.IMAGE }}:latest" .
+
+      # $ErrorActionPreference does not apply to native executables, so each
+      # push needs its own exit-code check - otherwise a failed first push is
+      # masked by a successful second one and a broken deploy looks green.
+      - name: Push image
+        run: |
+          docker push "${{ env.IMAGE }}:${{ github.sha }}"
+          if ($LASTEXITCODE -ne 0) { throw "push of the sha tag failed ($LASTEXITCODE)" }
+          docker push "${{ env.IMAGE }}:latest"
+          if ($LASTEXITCODE -ne 0) { throw "push of the latest tag failed ($LASTEXITCODE)" }
+
+      # The server still needs the repo for deploy/docker-compose.yml and
+      # deploy/Caddyfile, hence the git pull - but not to build anything.
+      - name: Roll out to the server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          $key = Join-Path $env:RUNNER_TEMP 'deploy_key'
+          $kh  = Join-Path $env:RUNNER_TEMP 'deploy_known_hosts'
+
+          # OpenSSH rejects a private key with CRLF line endings or no trailing
+          # newline, and PowerShell's redirection would give it both.
+          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+          $keyText = ($env:DEPLOY_SSH_KEY -replace "`r`n", "`n")
+          if (-not $keyText.EndsWith("`n")) { $keyText += "`n" }
+          [System.IO.File]::WriteAllText($key, $keyText, $utf8NoBom)
+          [System.IO.File]::WriteAllText($kh, ($env:DEPLOY_KNOWN_HOSTS -replace "`r`n", "`n") + "`n", $utf8NoBom)
+
+          # Windows OpenSSH refuses to use a key file other accounts can read.
+          icacls $key /inheritance:r /grant:r "$(whoami):(R)" | Out-Null
+
+          ssh -i $key `
+              -o IdentitiesOnly=yes `
+              -o UserKnownHostsFile="$kh" `
+              -o StrictHostKeyChecking=yes `
+              -o BatchMode=yes `
+              "$env:DEPLOY_USER@$env:DEPLOY_HOST" `
+              "cd ~/auth-platform && git pull --ff-only && bash deploy/remote-deploy.sh '${{ github.sha }}'"
+
+          if ($LASTEXITCODE -ne 0) { throw "Rollout failed (ssh exit $LASTEXITCODE)" }
+
+      # Runs even when the rollout fails, so the key never outlives the job.
+      - name: Shred the deploy key
+        if: always()
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue `
+            (Join-Path $env:RUNNER_TEMP 'deploy_key'), `
+            (Join-Path $env:RUNNER_TEMP 'deploy_known_hosts')

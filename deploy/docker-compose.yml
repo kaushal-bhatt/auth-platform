@@ -34,10 +34,19 @@ services:
     mem_limit: 512m
 
   auth-service:
+    # CI builds this image on the self-hosted runner and pushes it to GHCR
+    # (.github/workflows/deploy.yml), so this host never compiles anything —
+    # a deploy is a pull. AUTH_IMAGE_TAG is the commit sha currently rolled
+    # out; deploy/remote-deploy.sh writes it into .env, which is what makes a
+    # later bare `docker compose up -d` bring back the SAME build instead of
+    # drifting to whatever `latest` points at by then. The fallback covers the
+    # first bring-up, before CI has ever run.
+    image: ghcr.io/kaushal-bhatt/auth-service:${AUTH_IMAGE_TAG:-latest}
+    # Kept so `up -d --build` still works for local development, and so the
+    # stack can be brought up on a machine with no access to the registry.
     build:
       context: ..
       dockerfile: Dockerfile
-    image: auth-service:latest
     restart: unless-stopped
     depends_on:
       postgres:

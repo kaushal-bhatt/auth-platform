@@ -185,6 +185,86 @@ prove the TLS and relying-party configuration is right.
 
 ---
 
+## Continuous deployment (GitHub Actions, self-hosted runner)
+
+`.github/workflows/deploy.yml` turns a push to `main` into a rollout. The way the work is
+split is what makes it quick:
+
+| Where | What it does |
+|---|---|
+| **Self-hosted runner** (a development machine) | `gradlew build` (compile + tests), `docker build`, push the image to GHCR |
+| **This server** | `docker pull`, restart, health-check — via `deploy/remote-deploy.sh` |
+
+The server compiles nothing. A rollout is a pull of an image that already exists, so it
+takes seconds rather than the several minutes a Gradle build costs on 2 vCPUs — and the
+box is never pegged at 100% CPU while a visitor is using the demo.
+
+Two consequences of the runner being self-hosted rather than GitHub-hosted:
+
+- **Deploys only happen while that machine is on** with its runner service running. A push
+  made while it is off stays queued until the runner comes back.
+- The workflow deliberately has **no `pull_request` trigger**. This repository is public,
+  and a `pull_request` trigger on a self-hosted runner lets anyone run arbitrary code on
+  that machine by opening a PR. `push` to `main` requires write access.
+
+### One-time setup
+
+**1. Register the runner.** Repo → Settings → Actions → Runners → *New self-hosted runner*
+→ Windows x64, and run the commands it prints. Then install it as a service so it survives
+a reboot:
+
+```powershell
+.\svc.ps1 install <your-windows-username>
+```
+
+> ⚠️ Install it **as your own user account**, not the default `NETWORK SERVICE`. Docker
+> Desktop publishes its engine on a *per-user* named pipe, so a runner service under
+> `NETWORK SERVICE` cannot build images at all. Docker Desktop itself must also be running
+> when a build starts — enable its *"Start Docker Desktop when you sign in"* setting.
+
+**2. Create a deploy key.** It must have an **empty passphrase**; a pipeline cannot answer
+a prompt. Generate it on the development machine, keeping it separate from your personal
+SSH key so it can be revoked on its own:
+
+```powershell
+ssh-keygen -t ed25519 -N '""' -C "github-actions-deploy" -f "$env:USERPROFILE\.ssh\auth_platform_deploy"
+```
+
+Authorise the public half on the server:
+
+```bash
+cat >> ~/.ssh/authorized_keys
+```
+
+**3. Add four repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_HOST` | the server's IP or hostname |
+| `DEPLOY_USER` | the SSH user (`root`, unless you made another) |
+| `DEPLOY_SSH_KEY` | the full **private** key, `-----BEGIN` through `-----END` |
+| `DEPLOY_KNOWN_HOSTS` | output of `ssh-keyscan -t ed25519 <host>` |
+
+`DEPLOY_KNOWN_HOSTS` is not optional bureaucracy: without it the deploy step either fails
+on an unknown host key, or — if you disable the check — trusts whatever answers on that
+address, which is exactly the MITM the check exists to prevent.
+
+**4. Make the GHCR package public.** GitHub creates packages private even for public repos,
+and the server pulls anonymously. After the first successful push: your GitHub profile →
+Packages → `auth-service` → Package settings → Change visibility → Public. (Alternative: run
+`docker login ghcr.io` on the server with a read-only token, and keep the package private.)
+
+### Rolling back
+
+Every deploy is tagged with its commit sha and the live one is recorded as `AUTH_IMAGE_TAG`
+in the server's `.env`. To go back to an earlier build, on the server:
+
+```bash
+cd ~/auth-platform && bash deploy/remote-deploy.sh <older-commit-sha>
+```
+
+Nothing is rebuilt — that image is still in the registry.
+
 ## Keeping it alive
 
 Oracle reclaims **idle** Always Free compute instances. Its criteria are evaluated over a 7-day
@@ -210,10 +290,12 @@ Follow the logs:
 docker compose -f deploy/docker-compose.yml --env-file .env logs -f auth-service
 ```
 
-Deploy an update:
+Deploy an update by hand. Normally CI does this for you — see
+[Continuous deployment](#continuous-deployment-github-actions-self-hosted-runner) — but the
+same script is what you run to deploy or roll back manually:
 
 ```bash
-git pull && docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
+git pull --ff-only && bash deploy/remote-deploy.sh <commit-sha-or-latest>
 ```
 
 Back up the database — the signing keys live there, encrypted:

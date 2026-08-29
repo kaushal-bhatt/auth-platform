@@ -24,14 +24,24 @@ COPY auth-service/build.gradle.kts ./auth-service/
 RUN sed -i 's#^org.gradle.jvmargs=.*#org.gradle.jvmargs=-Xmx1536m#' gradle.properties \
     && chmod +x gradlew
 
+# /root/.gradle is GRADLE_USER_HOME for this stage, and a BuildKit cache mount
+# makes it survive BETWEEN builds rather than being discarded with the layer.
+# Without it every CI build re-downloads the entire dependency graph, which is
+# the slowest part of the build by far. `sharing=locked` stops two concurrent
+# builds from corrupting the cache.
+
 # Warm the dependency cache (best-effort; ignore failure so a source-only build still works).
-RUN ./gradlew :auth-service:dependencies --no-daemon -q > /dev/null 2>&1 || true
+RUN --mount=type=cache,target=/root/.gradle,sharing=locked \
+    ./gradlew :auth-service:dependencies --no-daemon -q > /dev/null 2>&1 || true
 
 # Now the sources.
 COPY auth-jwt-lib/src ./auth-jwt-lib/src
 COPY auth-service/src ./auth-service/src
 
-RUN ./gradlew :auth-service:bootJar --no-daemon \
+# The jar must be copied out inside THIS RUN: a cache mount is not part of the
+# image, so anything written under /root/.gradle is gone once the step ends.
+RUN --mount=type=cache,target=/root/.gradle,sharing=locked \
+    ./gradlew :auth-service:bootJar --no-daemon \
     && cp "$(ls auth-service/build/libs/*.jar | grep -v -- '-plain.jar')" /workspace/app.jar
 
 # ---------------------------------------------------------------------------
