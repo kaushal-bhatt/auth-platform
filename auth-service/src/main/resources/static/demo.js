@@ -213,7 +213,11 @@ var PORTFOLIO_URL = "";
         },
         pubKeyCredParams: opt.pubKeyCredParams.map(function (p) { return { type: p.type, alg: p.alg }; }),
         timeout: opt.timeoutMillis,
-        authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
+        // "required", not "preferred": the server validates with
+        // userVerificationRequired=true, so an authenticator that satisfied only user
+        // PRESENCE would produce a credential the server then rejects. Asking for it up
+        // front makes the authenticator actually verify the user (biometric or PIN).
+        authenticatorSelection: { residentKey: "preferred", userVerification: "required" },
         attestation: "none"
       };
 
@@ -259,7 +263,9 @@ var PORTFOLIO_URL = "";
           return { type: "public-key", id: b64urlToBytes(id) };
         }),
         timeout: opt.timeoutMillis,
-        userVerification: "preferred"
+        // Must match the registration ceremony and the server's AuthenticationParameters,
+        // which also require user verification.
+        userVerification: "required"
       };
 
       var assertion;
