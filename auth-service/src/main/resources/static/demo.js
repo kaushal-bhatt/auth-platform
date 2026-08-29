@@ -8,13 +8,10 @@
  *  EDIT ME — where your portfolio lives.
  *  Set this to your portfolio's URL (e.g. "https://kaushalbhatt.dev") so the
  *  "Back to portfolio" link in the footer actually goes there. Leave it as ""
- *  and that link is hidden entirely rather than pointing nowhere.
+ *  and that link falls back to the referring page, or is hidden entirely
+ *  rather than pointing nowhere.
  * ========================================================================= */
 var PORTFOLIO_URL = "";
-
-// Used INSTEAD of PORTFOLIO_URL when this demo is being served from localhost, so the
-// round-trip works during local testing. This is the port run-portfolio.ps1 serves on.
-var LOCAL_PORTFOLIO_URL = "http://localhost:4599";
 /* ======================================================================== */
 
 (function () {
@@ -310,11 +307,8 @@ var LOCAL_PORTFOLIO_URL = "http://localhost:4599";
   // With neither available the link is hidden rather than left pointing nowhere.
   var back = $("back-to-portfolio");
   if (back) {
-    var isLocal = ["localhost", "127.0.0.1", "::1"].indexOf(location.hostname) !== -1;
     var target = "";
-    if (isLocal && LOCAL_PORTFOLIO_URL) {
-      target = LOCAL_PORTFOLIO_URL;
-    } else if (PORTFOLIO_URL) {
+    if (PORTFOLIO_URL) {
       target = PORTFOLIO_URL;
     } else if (document.referrer) {
       try {

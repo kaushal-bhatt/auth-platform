@@ -32,7 +32,7 @@ public class RateLimitProperties {
     /**
      * Trust the first hop of {@code X-Forwarded-For} for the client IP. Correct when the service
      * sits behind exactly one reverse proxy / load balancer (Caddy, an ALB) that appends the real
-     * client IP - which is the deployment topology in {@code deploy/DEPLOY-AWS.md}. If the service
+     * client IP - which is the deployment topology in {@code deploy/DEPLOY.md}. If the service
      * were ever exposed directly to clients this should be {@code false}, since a client could then
      * spoof the header to dodge the limit.
      */

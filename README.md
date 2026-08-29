@@ -16,7 +16,7 @@ instance of auth-service, registers and logs in over real HTTP, and verifies the
 with auth-jwt-lib's real verifier fetching the service's own live `/.well-known/jwks.json` — no
 mocks anywhere in that path.
 
-## Live demo, portfolio & deployment
+## Live demo & deployment
 
 This repo also ships everything needed to showcase the platform publicly:
 
@@ -28,11 +28,10 @@ This repo also ships everything needed to showcase the platform publicly:
   tests are unaffected; enable it for a public deployment with
   `AUTH_PLATFORM_RATELIMIT_ENABLED=true` (defaults to 5 actions per IP per 24h). It is a demo abuse
   guard, not a security control — see its javadoc.
-- **`portfolio/`** — a standalone, dependency-free HTML/CSS/JS portfolio site that features the
-  platform and links to the live demo. Edit the `CONFIG` block at the top of `portfolio/script.js`.
-- **`Dockerfile`** + **`deploy/`** — a container image and a full **AWS Free-Tier (ECS-on-EC2)**
-  deployment kit (task definition, Caddy auto-HTTPS, env template). See
-  [`deploy/DEPLOY-AWS.md`](deploy/DEPLOY-AWS.md).
+- **`Dockerfile`** + **`deploy/`** — a container image and a complete single-host deployment
+  kit: Docker Compose (service + Postgres + Caddy auto-HTTPS) and an env template. Written for
+  **Oracle Cloud Always Free** ARM, with any small VPS (Netcup, Hetzner) as a drop-in alternative.
+  See [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
 
 > To exercise the built-in demo page **locally**, set `AUTH_PLATFORM_WEBAUTHN_ORIGIN=http://localhost:8080`
 > (the page is served from `:8080`, whereas the default origin targets the `:3000` manual-test flow

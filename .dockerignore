@@ -7,7 +7,6 @@
 .gradle
 **/build
 docs
-portfolio
 deploy/*.md
 *.md
 README.md

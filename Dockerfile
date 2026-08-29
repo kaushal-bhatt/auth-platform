@@ -47,9 +47,9 @@ USER app
 
 EXPOSE 8080
 
-# Tuned for a small (t3.micro, 1 GB) host: cap heap to a share of the container
-# memory and use the low-footprint serial collector. Override at deploy time if
-# you give the container more memory.
+# Tuned for a small single-VM host (see deploy/DEPLOY.md): cap heap to a share
+# of the container memory and use the low-footprint serial collector. Override at
+# deploy time if you give the container more memory.
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=55 -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError"
 
 # Every runtime secret/config value is supplied via environment variables (see
