@@ -86,7 +86,11 @@ fi
 echo "==> Waiting for https://${DOMAIN}${HEALTH_PATH}"
 healthy=0
 for attempt in $(seq 1 40); do
-    if curl -fsS --max-time 5 -o /dev/null "https://${DOMAIN}${HEALTH_PATH}"; then
+    # Insist on a 200, rather than trusting `curl -f`: curl does not treat a 3xx
+    # as a failure, so a stale proxy config that redirects the request elsewhere
+    # would report a perfectly healthy rollout of a service nobody can reach.
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "https://${DOMAIN}${HEALTH_PATH}" || echo 000)"
+    if [ "$code" = "200" ]; then
         echo "==> Healthy after ${attempt} attempt(s)."
         healthy=1
         break
@@ -95,7 +99,7 @@ for attempt in $(seq 1 40); do
 done
 
 if [ "$healthy" -ne 1 ]; then
-    echo "!!! ${SERVICE} not healthy after ~2 minutes. Last 60 log lines:" >&2
+    echo "!!! ${SERVICE} not healthy after ~2 minutes (last status: ${code}). Last 60 log lines:" >&2
     "${COMPOSE[@]}" logs --tail=60 "$SERVICE" >&2 || true
     exit 1
 fi

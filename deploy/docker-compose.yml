@@ -96,8 +96,18 @@ services:
       ROOT_DOMAIN: ${ROOT_DOMAIN:-localhost}
       ACME_EMAIL: ${ACME_EMAIL}
       UPSTREAM: "auth-service:8080"
+    # Points at the Caddyfile inside a DIRECTORY mount rather than bind-mounting
+    # the file itself.
+    #
+    # A single-file bind mount attaches to an inode. `git pull` does not edit a
+    # file in place — it writes a replacement and renames over it, giving a new
+    # inode — so the container carried on serving the previous config while the
+    # host showed the new file, and `caddy reload` answered "config is
+    # unchanged". A directory mount resolves the name on every open, so the
+    # change is actually visible.
+    command: ["caddy", "run", "--config", "/etc/caddy/conf/Caddyfile", "--adapter", "caddyfile"]
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./:/etc/caddy/conf:ro
       - caddy_data:/data
       - caddy_config:/config
 
