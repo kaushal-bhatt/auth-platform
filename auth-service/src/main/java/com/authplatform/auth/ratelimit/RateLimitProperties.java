@@ -23,8 +23,17 @@ public class RateLimitProperties {
     /** Master switch. Off unless a deployment sets it. */
     private boolean enabled = false;
 
-    /** How many limited requests one client key may make per window before receiving 429. */
-    private int maxRequests = 5;
+    /**
+     * How many limited requests one client key may make per window before receiving 429.
+     * <p>
+     * This counts requests, not visitors, so the default is expressed in units of demo runs: one
+     * full run costs six limited requests (register, login, and an init and a complete for each of
+     * the two WebAuthn ceremonies), and 30 is five such runs. A value below six is a trap rather
+     * than a strict setting - it lets nobody finish the demo even once, because the last request of
+     * the passkey login is the sixth and is refused. Keep this in step with
+     * {@link #getLimitedPaths()} if that list changes.
+     */
+    private int maxRequests = 30;
 
     /** Length of the fixed window, in hours, after which a client's counter resets. */
     private long windowHours = 24;
