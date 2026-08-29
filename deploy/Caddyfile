@@ -5,25 +5,32 @@
 #
 # AUTH_DOMAIN and ACME_EMAIL are supplied as environment variables (see .env.example).
 # The upstream defaults to the linked app container; override UPSTREAM if needed.
-
 {
 	email {$ACME_EMAIL}
 }
 
-# Holding block for the bare domain until the portfolio is deployed there. Both
-# names already resolve to this host, and without a block for them Caddy has no
-# certificate to offer, so anyone typing the bare domain gets a TLS error.
+# One canonical hostname: www redirects to the bare domain rather than serving
+# the same pages twice.
 #
-# The redirect is a 302, NOT `permanent`. A 301 is cached hard by browsers, so
-# every visitor who arrived during this window would keep being bounced to the
-# demo from their own cache long after the portfolio went live.
+# This redirect IS `permanent` (301), unlike the temporary one it replaces. That
+# earlier block sent both names to the demo while the site was still being
+# built, and had to stay a 302 — a 301 would have sat in visitors' browser
+# caches and kept bouncing them to the demo after the site went live. A
+# www-to-apex redirect has no such end date, so caching it is the point.
+www.{$ROOT_DOMAIN:localhost} {
+	redir https://{$ROOT_DOMAIN}{uri} permanent
+}
+
+# The personal site.
 #
 # ROOT_DOMAIN falls back to `localhost` deliberately: Caddy serves that with an
 # internal certificate and never contacts Let's Encrypt, so a deployment that
 # does not set it gets a harmless no-op instead of a cert-failure restart loop
 # that would take AUTH_DOMAIN down with it.
-{$ROOT_DOMAIN:localhost}, www.{$ROOT_DOMAIN:localhost} {
-	redir https://{$AUTH_DOMAIN}{uri}
+{$ROOT_DOMAIN:localhost} {
+	encode zstd gzip
+
+	reverse_proxy {$PORTFOLIO_UPSTREAM:portfolio:3000}
 }
 
 {$AUTH_DOMAIN} {

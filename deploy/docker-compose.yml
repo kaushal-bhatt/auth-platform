@@ -31,7 +31,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    mem_limit: 512m
+    # Two databases live here now (authplatform and portfolio), so a little more
+    # room than the 512m this had when it served one.
+    mem_limit: 640m
 
   auth-service:
     # CI builds this image on the self-hosted runner and pushes it to GHCR
@@ -57,6 +59,27 @@ services:
     mem_limit: 1200m
     environment:
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=55 -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError"
+
+  # The personal site at the bare domain. Built and pushed by the deploy
+  # workflow in the kaushal-portfolio repository, exactly like auth-service —
+  # this host pulls, it does not build.
+  portfolio:
+    image: ghcr.io/kaushal-bhatt/portfolio:${PORTFOLIO_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose: ["3000"]
+    environment:
+      # Its own database AND its own Postgres role, not auth-platform's. The
+      # site is the more exposed of the two services, and a separate role means
+      # a flaw there cannot reach the auth tables. Created once by hand — see
+      # DEPLOY.md, "Adding the portfolio".
+      DATABASE_URL: postgresql://${PORTFOLIO_DB_USER:-portfolio}:${PORTFOLIO_DB_PASSWORD}@postgres:5432/${PORTFOLIO_DB:-portfolio}
+      NEXTAUTH_URL: https://${ROOT_DOMAIN}
+      NEXTAUTH_SECRET: ${PORTFOLIO_NEXTAUTH_SECRET}
+      NODE_ENV: production
+    mem_limit: 400m
 
   caddy:
     image: caddy:2-alpine

@@ -260,10 +260,69 @@ Every deploy is tagged with its commit sha and the live one is recorded as `AUTH
 in the server's `.env`. To go back to an earlier build, on the server:
 
 ```bash
-cd ~/auth-platform && bash deploy/remote-deploy.sh <older-commit-sha>
+cd ~/auth-platform && bash deploy/remote-deploy.sh auth-service <older-commit-sha>
 ```
 
 Nothing is rebuilt — that image is still in the registry.
+
+## Adding the portfolio
+
+The personal site runs on this same host, at the bare domain, sharing the Postgres container.
+It lives in its own repository (`kaushal-portfolio`) with its own deploy workflow; this host
+only pulls its image, exactly as it does for auth-service.
+
+### Its own database and role
+
+The site gets a **separate Postgres role and database**, not auth-platform's. It is the more
+exposed of the two services, and a separate role means a flaw there cannot read the auth
+tables. The Postgres volume already exists, so an `initdb` script would never run — create
+them once by hand:
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file .env exec -T postgres psql -U "$POSTGRES_USER" -d postgres
+```
+
+```sql
+CREATE ROLE portfolio LOGIN PASSWORD 'the-value-you-put-in-PORTFOLIO_DB_PASSWORD';
+CREATE DATABASE portfolio OWNER portfolio;
+```
+
+### Schema and content
+
+The image serves; it never migrates. That is deliberate — a container restart must not be
+able to change the database schema on its own.
+
+Postgres is **not published to the host** — it is `expose`d only, reachable from inside the
+compose network and nowhere else. So this runs in a throwaway Node container attached to that
+network, which also means the host needs no Node installed:
+
+```bash
+git clone https://github.com/kaushal-bhatt/kaushal-portfolio.git /tmp/portfolio
+```
+
+```bash
+docker run --rm -v /tmp/portfolio:/app -w /app --network deploy_default -e DATABASE_URL="postgresql://portfolio:<password>@postgres:5432/portfolio" node:22-alpine sh -c "apk add --no-cache openssl && npm ci && npx prisma db push && npm run db:seed"
+```
+
+`postgres` is the compose service name, and `deploy_default` is the network compose creates
+for this stack — it is named after the directory holding the compose file, not the project
+folder. Check with `docker network ls` if it differs.
+
+The seed is non-destructive: it skips any table that already has rows unless `SEED_FORCE=true`,
+so re-running it cannot wipe the site. Delete `/tmp/portfolio` afterwards.
+
+### Wiring it up
+
+1. Set `ROOT_DOMAIN`, `PORTFOLIO_DB_PASSWORD` and `PORTFOLIO_NEXTAUTH_SECRET` in `.env`.
+2. Point both the apex and `www` at this host (A records, **DNS only** — a proxy in front
+   breaks the ACME challenge).
+3. `docker compose -f deploy/docker-compose.yml --env-file .env up -d`
+
+Caddy serves the site at the apex and 301s `www` to it.
+
+> A self-hosted runner belongs to **one repository** — GitHub only offers shared runners at
+> organisation level, which a personal account does not have. So the portfolio needs a
+> *second* runner registered from its own repo. Same machine, different folder.
 
 ## Keeping it alive
 
@@ -295,7 +354,7 @@ Deploy an update by hand. Normally CI does this for you — see
 same script is what you run to deploy or roll back manually:
 
 ```bash
-git pull --ff-only && bash deploy/remote-deploy.sh <commit-sha-or-latest>
+git pull --ff-only && bash deploy/remote-deploy.sh auth-service <commit-sha-or-latest>
 ```
 
 Back up the database — the signing keys live there, encrypted:

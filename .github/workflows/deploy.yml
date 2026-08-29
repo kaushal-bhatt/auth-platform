@@ -124,7 +124,7 @@ jobs:
               -o StrictHostKeyChecking=yes `
               -o BatchMode=yes `
               "$env:DEPLOY_USER@$env:DEPLOY_HOST" `
-              "cd ~/auth-platform && git pull --ff-only && bash deploy/remote-deploy.sh '${{ github.sha }}'"
+              "cd ~/auth-platform && git pull --ff-only && bash deploy/remote-deploy.sh auth-service '${{ github.sha }}'"
 
           if ($LASTEXITCODE -ne 0) { throw "Rollout failed (ssh exit $LASTEXITCODE)" }
 
