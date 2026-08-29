@@ -26,8 +26,9 @@ This repo also ships everything needed to showcase the platform publicly:
   call, showing the real request/response and decoding the JWT at each step.
 - **A per-IP rate limiter** (`com.authplatform.auth.ratelimit`) — off by default so local dev and
   tests are unaffected; enable it for a public deployment with
-  `AUTH_PLATFORM_RATE_LIMIT_ENABLED=true` (defaults to 5 actions per IP per 24h). It is a demo abuse
-  guard, not a security control — see its javadoc.
+  `AUTH_PLATFORM_RATE_LIMIT_ENABLED=true`. It counts requests, not visitors, and one full run of
+  the demo costs six of them, so size `..._MAX_REQUESTS` in units of runs — 30 is five runs per IP
+  per 24h. It is a demo abuse guard, not a security control — see its javadoc.
 - **`Dockerfile`** + **`deploy/`** — a container image and a complete single-host deployment
   kit: Docker Compose (service + Postgres + Caddy auto-HTTPS) and an env template. Written for
   **Oracle Cloud Always Free** ARM, with any small VPS (Netcup, Hetzner) as a drop-in alternative.

@@ -77,15 +77,33 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void trustsFirstHopOfForwardedForHeader() throws Exception {
+    void prefersRealIpOverAnythingTheCallerCanForge() throws Exception {
         RateLimitFilter filter = new RateLimitFilter(props(true, 1));
-        MockHttpServletRequest first = post("/auth/login", "10.0.0.1"); // proxy socket addr
-        first.addHeader("X-Forwarded-For", "203.0.113.7, 10.0.0.1");
+        // The proxy APPENDS to X-Forwarded-For, so its left-most entries are whatever the caller
+        // sent. X-Real-IP is written with an overwrite, so it is the one value a caller cannot
+        // influence - and changing the forged entries must not buy a fresh allowance.
+        MockHttpServletRequest first = post("/auth/login", "10.0.0.1");
+        first.addHeader("X-Real-IP", "203.0.113.7");
+        first.addHeader("X-Forwarded-For", "1.1.1.1, 203.0.113.7, 10.0.0.1");
         assertThat(run(filter, first)).isEqualTo(HttpServletResponse.SC_OK);
 
-        // Same real client (first hop), different proxy socket address: must still be limited.
-        MockHttpServletRequest second = post("/auth/login", "10.0.0.2");
-        second.addHeader("X-Forwarded-For", "203.0.113.7, 10.0.0.2");
+        MockHttpServletRequest second = post("/auth/login", "10.0.0.1");
+        second.addHeader("X-Real-IP", "203.0.113.7");
+        second.addHeader("X-Forwarded-For", "2.2.2.2, 203.0.113.7, 10.0.0.1");
+        assertThat(run(filter, second)).isEqualTo(429);
+    }
+
+    @Test
+    void withoutRealIpTrustsTheLastHopOfForwardedFor() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter(props(true, 1));
+        // No X-Real-IP: the right-most entry is the hop the nearest trusted proxy wrote. Keying on
+        // the left-most one would let a forged value per request dodge the limit entirely.
+        MockHttpServletRequest first = post("/auth/login", "10.0.0.1");
+        first.addHeader("X-Forwarded-For", "1.1.1.1, 203.0.113.7");
+        assertThat(run(filter, first)).isEqualTo(HttpServletResponse.SC_OK);
+
+        MockHttpServletRequest second = post("/auth/login", "10.0.0.1");
+        second.addHeader("X-Forwarded-For", "2.2.2.2, 203.0.113.7");
         assertThat(run(filter, second)).isEqualTo(429);
     }
 
