@@ -63,22 +63,25 @@ else
         "$SERVICE" "$TAG_VAR" "$TAG" >> .env
 fi
 
-# Only this service is recreated. Postgres and Caddy keep running, so a deploy
-# never restarts the database or drops the TLS certificates.
-echo "==> Starting ${SERVICE}"
-"${COMPOSE[@]}" up -d "$SERVICE"
+# The whole stack, not just this one service. Compose is declarative: it only
+# recreates containers whose image or configuration actually changed, so the
+# database and Caddy are still left alone on an ordinary rollout. Naming a single
+# service looked safer but silently skipped changes to the others — a Caddy
+# volume and command change sat unapplied through two deploys because nothing
+# ever asked compose to converge that container.
+echo "==> Converging the stack (${SERVICE} is the one being rolled out)"
+"${COMPOSE[@]}" up -d
 
-# The Caddyfile is a bind mount, so the `git pull` above can have changed it
-# without the running container noticing — and the line above only touches one
-# app service. Reload applies the new routing with no downtime and without
-# re-requesting certificates. It has to happen BEFORE the health check, because
-# that check goes through Caddy.
+# A change to the Caddyfile alone does not alter Caddy's compose configuration,
+# so the converge above leaves it running with the previous routing. Reload
+# applies the new file with no downtime and without re-requesting certificates.
+# It runs BEFORE the health check because that check goes through Caddy.
+#
+# The path must match the `command:` in docker-compose.yml — the config lives
+# under the mounted directory, not at Caddy's default /etc/caddy/Caddyfile.
 if "${COMPOSE[@]}" ps --status running --services 2>/dev/null | grep -qx caddy; then
     echo "==> Reloading Caddy"
-    "${COMPOSE[@]}" exec -T caddy caddy reload --config /etc/caddy/Caddyfile
-else
-    echo "==> Caddy is not running; bringing the whole stack up"
-    "${COMPOSE[@]}" up -d
+    "${COMPOSE[@]}" exec -T caddy caddy reload --config /etc/caddy/conf/Caddyfile
 fi
 
 # A container that starts and then crash-loops must fail the pipeline, so wait
