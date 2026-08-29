@@ -11,7 +11,7 @@
  *  and that link falls back to the referring page, or is hidden entirely
  *  rather than pointing nowhere.
  * ========================================================================= */
-var PORTFOLIO_URL = "";
+var PORTFOLIO_URL = "https://wekt.in";
 /* ======================================================================== */
 
 (function () {
