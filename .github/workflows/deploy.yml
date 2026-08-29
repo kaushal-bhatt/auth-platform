@@ -63,14 +63,17 @@ jobs:
       - name: Test
         run: .\gradlew.bat build
 
-      # The token goes through the environment rather than being interpolated
-      # into the script body, so it never lands in a file on the runner's disk.
+      # Uses the official action rather than piping the token into `docker login
+      # --password-stdin` by hand: that pipe goes through Windows PowerShell,
+      # whose native-command stdin handling is not dependable, so a login
+      # failure there is ambiguous between "bad token" and "mangled token".
+      # This action runs in Node and hands the password over directly.
       - name: Log in to GHCR
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $env:GHCR_TOKEN | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          if ($LASTEXITCODE -ne 0) { throw "docker login failed ($LASTEXITCODE)" }
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Plain `docker build` - BuildKit is the default in Docker 29, so the
       # `--mount=type=cache` lines in the Dockerfile keep the Gradle dependency
