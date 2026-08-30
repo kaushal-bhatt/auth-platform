@@ -22,7 +22,20 @@
       <span>Auth Platform · <strong>Live Demo</strong></span>
     </div>
     <div class="topbar-right">
-      <span id="ratelimit-badge" class="pill pill-muted" title="Actions remaining from your network today">— / 5 left today</span>
+      <span class="ratelimit-wrap">
+        <span id="ratelimit-badge" class="pill pill-muted">— / 30 credits left today</span>
+        <button type="button" class="info-dot" id="ratelimit-info" aria-label="What are credits?" aria-describedby="ratelimit-tip">?</button>
+        <span class="ratelimit-tip" id="ratelimit-tip" role="tooltip">
+          <strong>Credits</strong> are this demo’s daily allowance. Every state-changing call to the
+          service spends one — registering, logging in, and the init and complete steps of each
+          passkey ceremony.
+          <br><br>
+          A full run, from registering to a passkey login, costs <strong>6 credits</strong>. Your
+          network gets <strong>30 per day</strong>, which is five complete runs.
+          <br><br>
+          The counter resets 24 hours after your first action.
+        </span>
+      </span>
       <a class="ghost-link" href="/.well-known/jwks.json" target="_blank" rel="noopener">JWKS ↗</a>
     </div>
   </header>

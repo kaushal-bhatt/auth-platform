@@ -56,8 +56,8 @@ var PORTFOLIO_URL = "https://wekt.in";
     var limit = headers.get("X-RateLimit-Limit");
     if (remaining === null || limit === null) return;
     var badge = $("ratelimit-badge");
-    badge.textContent = remaining + " / " + limit + " left today";
-    badge.className = "pill " + (remaining === "0" ? "pill-danger" : (parseInt(remaining, 10) <= 1 ? "pill-warn" : "pill-muted"));
+    badge.textContent = remaining + " / " + limit + " credits left today";
+    badge.className = "pill " + (remaining === "0" ? "pill-danger" : (parseInt(remaining, 10) < 6 ? "pill-warn" : "pill-muted"));
   }
 
   // ---- the one network primitive ----

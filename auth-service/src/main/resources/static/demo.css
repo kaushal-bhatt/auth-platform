@@ -76,6 +76,51 @@ body {
 .pill-warn { color: #ffd08a; border-color: #6a5320; background: #241d0d; }
 .pill-danger { color: var(--danger); border-color: #5a2330; background: #250f16; }
 
+/* The credits badge and its explainer. The badge alone says a number; the dot says what the
+   number buys, because "30 left" means nothing until you know a full run costs six. */
+.ratelimit-wrap { position: relative; display: inline-flex; align-items: center; gap: 6px; }
+
+.info-dot {
+  width: 18px; height: 18px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px; line-height: 1;
+  cursor: help;
+  transition: color .15s, border-color .15s;
+}
+.info-dot:hover, .info-dot:focus-visible { color: var(--accent-2); border-color: var(--accent-2); outline: none; }
+
+/* Kept in the accessibility tree (opacity, not visibility) so aria-describedby can announce it
+   on keyboard focus rather than only on hover. */
+.ratelimit-tip {
+  position: absolute;
+  top: calc(100% + 8px); right: 0;
+  z-index: 30;
+  width: 300px; max-width: calc(100vw - 32px);
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-size: 12px; line-height: 1.55;
+  text-align: left;
+  box-shadow: 0 12px 32px #00000077;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .15s, transform .15s;
+}
+.ratelimit-tip strong { color: var(--text); }
+.info-dot:hover + .ratelimit-tip,
+.info-dot:focus + .ratelimit-tip,
+.info-dot:focus-visible + .ratelimit-tip,
+.ratelimit-tip:hover { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) { .ratelimit-tip { transition: none; } }
+
 .ghost-link {
   color: var(--text-dim);
   text-decoration: none;
