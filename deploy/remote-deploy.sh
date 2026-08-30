@@ -39,7 +39,30 @@ case "$SERVICE" in
         ;;
 esac
 
-COMPOSE=(docker compose -f deploy/docker-compose.yml --env-file .env)
+# Which image build each service is on. Kept OUT of .env deliberately.
+#
+# auth-service loads the whole of .env through `env_file:`, so writing the
+# portfolio's image tag there changed auth-service's environment — and compose
+# recreates a container whose environment changed. Every portfolio deploy was
+# therefore restarting auth-service, roughly fifteen seconds of 502s on a
+# service that had nothing to do with the rollout. Splitting the tags into a
+# file used only for substitution, never loaded into a container, means a deploy
+# touches only the service being deployed.
+IMAGES_ENV=".env.images"
+touch "$IMAGES_ENV"
+
+# One-time migration for deployments that still carry the tags in .env.
+for var in AUTH_IMAGE_TAG PORTFOLIO_IMAGE_TAG; do
+    if grep -q "^${var}=" .env; then
+        grep "^${var}=" .env >> "$IMAGES_ENV"
+        sed -i "/^${var}=/d" .env
+        # The comment the old script wrote above the value goes too.
+        sed -i "/^# Set by deploy\/remote-deploy.sh/d" .env
+        echo "==> Moved ${var} out of .env into ${IMAGES_ENV}"
+    fi
+done
+
+COMPOSE=(docker compose -f deploy/docker-compose.yml --env-file .env --env-file "$IMAGES_ENV")
 
 # Read the domain rather than sourcing .env: that file holds passwords which
 # `source` would word-split or glob-expand.
@@ -55,12 +78,11 @@ docker pull "${IMAGE}:${TAG}"
 # Record which build is live. docker-compose.yml reads this variable, so a plain
 # `docker compose up -d` on this box later brings back the SAME image rather
 # than silently drifting to whatever `latest` points at by then.
-echo "==> Pinning ${TAG_VAR}=${TAG} in .env"
-if grep -q "^${TAG_VAR}=" .env; then
-    sed -i "s|^${TAG_VAR}=.*|${TAG_VAR}=${TAG}|" .env
+echo "==> Pinning ${TAG_VAR}=${TAG} in ${IMAGES_ENV}"
+if grep -q "^${TAG_VAR}=" "$IMAGES_ENV"; then
+    sed -i "s|^${TAG_VAR}=.*|${TAG_VAR}=${TAG}|" "$IMAGES_ENV"
 else
-    printf '\n# Set by deploy/remote-deploy.sh - the %s build currently deployed.\n%s=%s\n' \
-        "$SERVICE" "$TAG_VAR" "$TAG" >> .env
+    printf '%s=%s\n' "$TAG_VAR" "$TAG" >> "$IMAGES_ENV"
 fi
 
 # The whole stack, not just this one service. Compose is declarative: it only

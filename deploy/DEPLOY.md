@@ -158,14 +158,14 @@ AES-256-GCM encrypted at rest with it. Lose it and every stored key becomes unus
 ## Step 6 — Build and run
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
+docker compose -f deploy/docker-compose.yml --env-file .env --env-file .env.images up -d --build
 ```
 
 The first build compiles the Gradle project inside the image and takes several minutes on 2 ARM
 OCPUs — that is normal. Caddy then requests the certificate on the first request to the domain.
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file .env logs -f auth-service
+docker compose -f deploy/docker-compose.yml --env-file .env --env-file .env.images logs -f auth-service
 ```
 
 ## Step 7 — Verify end-to-end
@@ -279,7 +279,7 @@ tables. The Postgres volume already exists, so an `initdb` script would never ru
 them once by hand:
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file .env exec -T postgres psql -U "$POSTGRES_USER" -d postgres
+docker compose -f deploy/docker-compose.yml --env-file .env --env-file .env.images exec -T postgres psql -U "$POSTGRES_USER" -d postgres
 ```
 
 ```sql
@@ -319,7 +319,7 @@ so re-running it cannot wipe the site. Delete `/tmp/portfolio` afterwards.
    containers — auth-service verifies it, the site presents it.
 2. Point both the apex and `www` at this host (A records, **DNS only** — a proxy in front
    breaks the ACME challenge).
-3. `docker compose -f deploy/docker-compose.yml --env-file .env up -d`
+3. `docker compose -f deploy/docker-compose.yml --env-file .env --env-file .env.images up -d`
 
 Caddy serves the site at the apex and 301s `www` to it.
 
@@ -337,7 +337,7 @@ up"; the role is what separates you from every visitor who tried the demo.
 Grant it once, to your own account:
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file .env exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+docker compose -f deploy/docker-compose.yml --env-file .env --env-file .env.images exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 ```
 
 ```sql
@@ -376,7 +376,7 @@ floor *and* emails you the moment a visitor would have found a dead link.
 Follow the logs:
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file .env logs -f auth-service
+docker compose -f deploy/docker-compose.yml --env-file .env --env-file .env.images logs -f auth-service
 ```
 
 Deploy an update by hand. Normally CI does this for you — see
@@ -390,7 +390,7 @@ git pull --ff-only && bash deploy/remote-deploy.sh auth-service <commit-sha-or-l
 Back up the database — the signing keys live there, encrypted:
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file .env exec postgres pg_dump -U authplatform authplatform > backup.sql
+docker compose -f deploy/docker-compose.yml --env-file .env --env-file .env.images exec postgres pg_dump -U authplatform authplatform > backup.sql
 ```
 
 ## Running on a plain VPS instead
