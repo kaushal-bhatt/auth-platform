@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -72,7 +73,12 @@ public class TokenServiceImpl implements TokenService {
      * cross.
      */
     TokenResponse issueTokensForSession(Long userId, String email, UUID sessionId) {
-        String accessToken = jwtIssuer.issueAccessToken(userId, email, sessionId);
+        // Read on every issue rather than carried in from the caller: roles are authorisation,
+        // and a token minted from a stale copy would keep granting access that was revoked
+        // minutes earlier. Access tokens are short-lived precisely so a change here takes effect
+        // on the next refresh.
+        Set<String> roles = userRepository.findRolesByUserId(userId);
+        String accessToken = jwtIssuer.issueAccessToken(userId, email, sessionId, roles);
         String refreshToken = generateRefreshToken();
 
         // createdAt is stamped by TokenEntity's @PrePersist lifecycle callback.

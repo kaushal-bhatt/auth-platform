@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — Auth Platform</title>
+<!--
+  The sign-in page for the SSO redirect flow (see SsoController).
+
+  Deliberately standalone rather than part of the demo page: this is a real login, not a
+  walkthrough, and it should not invite anyone to click through registration steps on the way.
+  It is served by the controller only after the client and redirect URI have been checked, so
+  by the time this renders the destination is known to be registered.
+
+  The access token this page obtains never leaves the origin. It lives in a variable long
+  enough to prove who is asking for a code, and what crosses to the other site is the code.
+-->
+<style>
+  :root {
+    --bg: #0b0d17; --panel: #151827; --border: #262b40;
+    --text: #e6e8f0; --text-dim: #9aa2bd; --text-faint: #6b7392;
+    --accent: #6d8bff; --danger: #ff6b81; --ok: #46d39a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 1.5rem;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    background-image:
+      radial-gradient(900px 500px at 80% -10%, #6d8bff22, transparent 60%),
+      radial-gradient(700px 500px at 0% 10%, #35d0ba18, transparent 55%);
+  }
+  .card {
+    width: 100%; max-width: 26rem; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 14px; padding: 2rem;
+  }
+  h1 { margin: 0 0 .25rem; font-size: 1.35rem; }
+  .sub { margin: 0 0 1.5rem; color: var(--text-dim); font-size: .9rem; }
+  .dest { color: var(--text); font-weight: 600; }
+  label { display: block; font-size: .8rem; color: var(--text-dim); margin-bottom: .35rem; }
+  input {
+    width: 100%; padding: .65rem .75rem; margin-bottom: 1rem;
+    background: #0f1220; color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; font-size: .95rem;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    width: 100%; padding: .7rem 1rem; border-radius: 8px; border: 1px solid transparent;
+    font-size: .95rem; font-weight: 600; cursor: pointer;
+  }
+  button[disabled] { opacity: .55; cursor: default; }
+  .primary { background: var(--accent); color: #0b0d17; }
+  .secondary {
+    background: transparent; color: var(--text-dim);
+    border-color: var(--border); margin-top: .6rem; font-weight: 500;
+  }
+  .divider {
+    display: flex; align-items: center; gap: .75rem;
+    color: var(--text-faint); font-size: .75rem; margin: 1.1rem 0 .9rem;
+  }
+  .divider::before, .divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+  }
+  #pw-block { display: none; }
+  .msg { margin-top: 1rem; font-size: .875rem; min-height: 1.2rem; }
+  .msg.err { color: var(--danger); }
+  .msg.ok  { color: var(--ok); }
+  .foot { margin-top: 1.5rem; font-size: .75rem; color: var(--text-faint); }
+  .foot a { color: var(--text-dim); }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Sign in</h1>
+  <p class="sub">to continue to <span class="dest" id="dest">the requested application</span></p>
+
+  <form id="form" autocomplete="on">
+    <label for="email">Email</label>
+    <input id="email" type="email" name="email" autocomplete="username webauthn" required
+           placeholder="you@example.com">
+
+    <button type="submit" class="primary" id="btn-passkey">Continue with passkey</button>
+
+    <div class="divider">or</div>
+
+    <button type="button" class="secondary" id="btn-show-pw">Use a password instead</button>
+
+    <div id="pw-block">
+      <label for="password" style="margin-top:1rem">Password</label>
+      <input id="password" type="password" name="password" autocomplete="current-password">
+      <button type="button" class="primary" id="btn-password">Sign in with password</button>
+    </div>
+  </form>
+
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+  <p class="foot">
+    Secured by <a href="/">Auth Platform</a> — passkeys, WebAuthn, RS256.
+  </p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var params      = new URLSearchParams(location.search);
+  var CLIENT_ID   = params.get("client_id");
+  var REDIRECT_URI = params.get("redirect_uri");
+  var STATE       = params.get("state");
+
+  var msgEl = document.getElementById("msg");
+
+  function say(text, kind) {
+    msgEl.textContent = text || "";
+    msgEl.className = "msg" + (kind ? " " + kind : "");
+  }
+
+  // Shown as a hostname, never as the raw parameter: putting attacker-supplied text straight
+  // into the page is how a login screen ends up displaying someone else's message. The server
+  // has already confirmed this URI is registered before serving this page.
+  try {
+    document.getElementById("dest").textContent = new URL(REDIRECT_URI).hostname;
+  } catch (e) { /* leave the neutral default */ }
+
+  if (!CLIENT_ID || !REDIRECT_URI || !STATE) {
+    say("This sign-in link is incomplete. Please start again from the application.", "err");
+    document.getElementById("form").style.display = "none";
+    return;
+  }
+
+  // ---- base64url helpers (WebAuthn buffers <-> the service's base64url-no-pad wire format) ----
+  function b64urlToBytes(b64url) {
+    var b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  function bytesToB64url(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  async function api(path, body, token) {
+    var headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = "Bearer " + token;
+    var res = await fetch(path, { method: "POST", headers: headers, body: JSON.stringify(body) });
+    var data = null;
+    try { data = await res.json(); } catch (e) { /* empty or non-JSON body */ }
+    return { ok: res.ok, status: res.status, data: data };
+  }
+
+  function messageFrom(result, fallback) {
+    return (result.data && result.data.message) ? result.data.message : fallback;
+  }
+
+  /**
+   * The last step, shared by both sign-in methods: trade the access token for a one-time code
+   * and leave. If this fails the user is still authenticated here but cannot proceed, so the
+   * reason has to be shown rather than swallowed — the most likely one is that the account
+   * simply is not permitted to use this application.
+   */
+  async function finish(accessToken) {
+    say("Signed in. Redirecting…", "ok");
+    var result = await api("/sso/code", {
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT_URI,
+      state: STATE
+    }, accessToken);
+
+    if (!result.ok || !result.data || !result.data.redirect_url) {
+      say(messageFrom(result, "Could not complete sign-in."), "err");
+      return;
+    }
+    location.replace(result.data.redirect_url);
+  }
+
+  function busy(button, on, label) {
+    button.disabled = on;
+    if (on) { button.dataset.label = button.textContent; button.textContent = label; }
+    else if (button.dataset.label) { button.textContent = button.dataset.label; }
+  }
+
+  // ---- passkey ----
+  document.getElementById("form").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    var button = document.getElementById("btn-passkey");
+    var email = document.getElementById("email").value.trim();
+    if (!email) { say("Enter your email first.", "err"); return; }
+
+    busy(button, true, "Waiting for your passkey…");
+    say("");
+    try {
+      var init = await api("/passkey/login/init", { email: email }, null);
+      if (!init.ok) { say(messageFrom(init, "Could not start passkey sign-in."), "err"); return; }
+
+      var opt = init.data;
+      var assertion;
+      try {
+        assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge: b64urlToBytes(opt.challenge),
+            rpId: opt.rpId,
+            allowCredentials: (opt.allowCredentialIds || []).map(function (id) {
+              return { type: "public-key", id: b64urlToBytes(id) };
+            }),
+            timeout: opt.timeoutMillis,
+            // Must match what the server's AuthenticationParameters require. Asking for less
+            // here produces an assertion the server then rejects, which reads to the user as a
+            // broken login rather than a mismatch.
+            userVerification: "required"
+          }
+        });
+      } catch (e) {
+        say(e && e.name === "NotAllowedError"
+          ? "Passkey prompt was dismissed."
+          : "Your browser could not use a passkey here.", "err");
+        return;
+      }
+
+      var complete = await api("/passkey/login/complete", {
+        challenge: opt.challenge,
+        credentialId: bytesToB64url(assertion.rawId),
+        authenticatorData: bytesToB64url(assertion.response.authenticatorData),
+        clientDataJSON: bytesToB64url(assertion.response.clientDataJSON),
+        signature: bytesToB64url(assertion.response.signature)
+      }, null);
+
+      if (!complete.ok || !complete.data || !complete.data.accessToken) {
+        say(messageFrom(complete, "Passkey sign-in failed."), "err");
+        return;
+      }
+      await finish(complete.data.accessToken);
+    } finally {
+      busy(button, false);
+    }
+  });
+
+  // ---- password fallback ----
+  document.getElementById("btn-show-pw").addEventListener("click", function () {
+    document.getElementById("pw-block").style.display = "block";
+    this.style.display = "none";
+    document.getElementById("password").focus();
+  });
+
+  document.getElementById("btn-password").addEventListener("click", async function () {
+    var button = this;
+    var email = document.getElementById("email").value.trim();
+    var password = document.getElementById("password").value;
+    if (!email || !password) { say("Enter your email and password.", "err"); return; }
+
+    busy(button, true, "Signing in…");
+    say("");
+    try {
+      var result = await api("/auth/login", { email: email, password: password }, null);
+      if (!result.ok || !result.data || !result.data.accessToken) {
+        say(messageFrom(result, "Sign-in failed."), "err");
+        return;
+      }
+      await finish(result.data.accessToken);
+    } finally {
+      busy(button, false);
+    }
+  });
+})();
+</script>
+</body>
+</html>

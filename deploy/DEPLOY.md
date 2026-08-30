@@ -313,7 +313,9 @@ so re-running it cannot wipe the site. Delete `/tmp/portfolio` afterwards.
 
 ### Wiring it up
 
-1. Set `ROOT_DOMAIN`, `PORTFOLIO_DB_PASSWORD` and `PORTFOLIO_NEXTAUTH_SECRET` in `.env`.
+1. Set `ROOT_DOMAIN` and `PORTFOLIO_DB_PASSWORD` in `.env`, plus the SSO pair —
+   `AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_*` for this service and the matching
+   `AUTH_PLATFORM_SSO_CLIENT_SECRET` for the site.
 2. Point both the apex and `www` at this host (A records, **DNS only** — a proxy in front
    breaks the ACME challenge).
 3. `docker compose -f deploy/docker-compose.yml --env-file .env up -d`
@@ -323,6 +325,33 @@ Caddy serves the site at the apex and 301s `www` to it.
 > A self-hosted runner belongs to **one repository** — GitHub only offers shared runners at
 > organisation level, which a personal account does not have. So the portfolio needs a
 > *second* runner registered from its own repo. Same machine, different folder.
+
+### Granting the admin role
+
+The portfolio's admin panel is reached through this service's SSO flow, and the client is
+configured to require the role `portfolio-admin`. **Nothing grants it automatically.**
+Registration on the demo is open to anyone, so a valid token means only "this person signed
+up"; the role is what separates you from every visitor who tried the demo.
+
+Grant it once, to your own account:
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file .env exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+```sql
+INSERT INTO auth.user_role (user_id, role)
+SELECT id, 'portfolio-admin' FROM auth.app_user WHERE email = 'you@example.com';
+```
+
+It takes effect on the next token issued — access tokens are short-lived precisely so an
+authorisation change does not wait for a session to end. Revoking is the matching `DELETE`.
+
+> **One interaction to know about.** The SSO login goes through `/passkey/login/*`, which the
+> rate limiter counts (30 requests per IP per 24h, about five demo runs). Signing in to your own
+> admin panel therefore spends from the same budget as anyone demoing from your IP. It is
+> unlikely to bite — you sign in rarely — but if it ever does, the fix is to count the SSO path
+> separately rather than to loosen the demo's limit.
 
 ## Keeping it alive
 

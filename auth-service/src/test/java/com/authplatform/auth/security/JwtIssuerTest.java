@@ -20,6 +20,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,7 +89,7 @@ class JwtIssuerTest {
 
     @Test
     void issuedTokenHeaderKeyIdMatchesTheActiveCertificatesKeyId() throws Exception {
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID());
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
 
         SignedJWT signedJWT = SignedJWT.parse(token);
 
@@ -96,8 +97,35 @@ class JwtIssuerTest {
     }
 
     @Test
+    void issuedTokenCarriesTheGrantedRoles() throws Exception {
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(),
+            Set.of("portfolio-admin"));
+
+        SignedJWT signedJWT = SignedJWT.parse(token);
+
+        assertThat(signedJWT.getJWTClaimsSet().getStringListClaim("roles"))
+            .containsExactly("portfolio-admin");
+    }
+
+    /**
+     * The claim is present-but-empty rather than absent, so a relying party reads one shape
+     * instead of treating "no roles" as a separate case from "no claim". A consumer that had to
+     * handle both would eventually handle only one, and the missing branch is the one that
+     * defaults to letting someone in.
+     */
+    @Test
+    void issuedTokenCarriesAnEmptyRolesClaimRatherThanOmittingIt() throws Exception {
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
+
+        SignedJWT signedJWT = SignedJWT.parse(token);
+
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("roles")).isNotNull();
+        assertThat(signedJWT.getJWTClaimsSet().getStringListClaim("roles")).isEmpty();
+    }
+
+    @Test
     void issuedTokenIssuerClaimMatchesConfiguredIssuer() throws Exception {
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID());
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
 
         SignedJWT signedJWT = SignedJWT.parse(token);
 
@@ -106,7 +134,7 @@ class JwtIssuerTest {
 
     @Test
     void issuedTokenExpiryMinusIssueTimeMatchesConfiguredAccessTokenLifetime() throws Exception {
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID());
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
 
         SignedJWT signedJWT = SignedJWT.parse(token);
         Instant issuedAt = signedJWT.getJWTClaimsSet().getIssueTime().toInstant();
@@ -127,7 +155,7 @@ class JwtIssuerTest {
      */
     @Test
     void issuedTokenHeaderAlgorithmIsExactlyRs256() throws Exception {
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID());
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
 
         SignedJWT signedJWT = SignedJWT.parse(token);
 
@@ -142,7 +170,7 @@ class JwtIssuerTest {
      */
     @Test
     void issuedTokenSubjectIsTheUserIdRenderedAsAString() throws Exception {
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID());
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
 
         SignedJWT signedJWT = SignedJWT.parse(token);
 
@@ -153,7 +181,7 @@ class JwtIssuerTest {
     void issuedTokenCarriesTheEmailAndSessionClaims() throws Exception {
         UUID sessionId = UUID.randomUUID();
 
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, sessionId);
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, sessionId, Set.of());
 
         SignedJWT signedJWT = SignedJWT.parse(token);
         assertThat(signedJWT.getJWTClaimsSet().getClaim("email")).isEqualTo(EMAIL);
@@ -167,7 +195,7 @@ class JwtIssuerTest {
      */
     @Test
     void issuedTokenAudienceMatchesTheConfiguredAudience() throws Exception {
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID());
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
 
         SignedJWT signedJWT = SignedJWT.parse(token);
 
@@ -188,7 +216,7 @@ class JwtIssuerTest {
     @Test
     void issuedTokenIsAcceptedByTheLibraryVerifierUsingTheMatchingPublicKey() {
         UUID sessionId = UUID.randomUUID();
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, sessionId);
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, sessionId, Set.of());
 
         // exactly what KeysServiceImpl#toPublicJwk would publish on the jwks endpoint for the
         // certificate that signed this token. Resolved before the stubbing call below, because
@@ -222,7 +250,7 @@ class JwtIssuerTest {
      */
     @Test
     void issuedTokenIsRejectedByTheLibraryVerifierWhenThePublishedKeyIsFromAnotherKeypair() throws Exception {
-        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID());
+        String token = jwtIssuer.issueAccessToken(USER_ID, EMAIL, UUID.randomUUID(), Set.of());
 
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048);

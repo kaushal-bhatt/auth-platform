@@ -1,0 +1,88 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-create-sso-auth-code-table
+      author: auth-platform
+      # One-time authorisation codes for the redirect login flow (see SsoController).
+      #
+      # These live in the database rather than in memory for the same reason refresh tokens do:
+      # an in-memory map is emptied by every deploy, so a login in flight during a rollout would
+      # fail with no explanation. It also could not be made single-use safely under concurrency —
+      # the row lock is what guarantees exactly one redemption.
+      changes:
+        - createTable:
+            tableName: sso_auth_code
+            schemaName: auth
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+              # The SHA-256 of the code, never the code itself. A stolen database backup must
+              # not hand over usable codes, exactly as with refresh_token_hash in 004.
+              - column:
+                  name: code_hash
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: client_id
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              # Recorded so redemption can require the same redirect_uri the code was issued
+              # for. Without it, a code obtained for one registered URI could be redeemed while
+              # claiming another.
+              - column:
+                  name: redirect_uri
+                  type: VARCHAR(2048)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: consumed
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              # Nullable by design: an unredeemed code has no redemption instant. Kept
+              # alongside the boolean because a code presented twice is a signal worth being
+              # able to time.
+              - column:
+                  name: consumed_at
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            constraintName: fk_sso_auth_code_user
+            baseTableName: sso_auth_code
+            baseTableSchemaName: auth
+            baseColumnNames: user_id
+            referencedTableName: app_user
+            referencedTableSchemaName: auth
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+        # Codes live for a minute but rows accumulate forever otherwise; this is what the
+        # periodic purge scans.
+        - createIndex:
+            indexName: idx_sso_auth_code_expires_at
+            tableName: sso_auth_code
+            schemaName: auth
+            columns:
+              - column:
+                  name: expires_at

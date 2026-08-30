@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,7 +41,8 @@ class TokenServiceImplTest {
         userRepository = mock(UserRepository.class);
         jwtIssuer = mock(JwtIssuer.class);
         when(tokenRepository.save(any(TokenEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(jwtIssuer.issueAccessToken(any(), any(), any())).thenReturn("signed-jwt");
+        when(jwtIssuer.issueAccessToken(any(), any(), any(), any())).thenReturn("signed-jwt");
+        when(userRepository.findRolesByUserId(any())).thenReturn(Set.of());
         when(jwtIssuer.accessTokenExpirySeconds()).thenReturn(900L);
 
         JwtIssuerProperties properties = new JwtIssuerProperties();
@@ -201,7 +203,7 @@ class TokenServiceImplTest {
 
         tokenService.refresh("some-token");
 
-        verify(jwtIssuer).issueAccessToken(eq(42L), eq("user@example.com"), eq(existingSessionId));
+        verify(jwtIssuer).issueAccessToken(eq(42L), eq("user@example.com"), eq(existingSessionId), any());
 
         ArgumentCaptor<TokenEntity> captor = ArgumentCaptor.forClass(TokenEntity.class);
         verify(tokenRepository, times(2)).save(captor.capture());
@@ -224,7 +226,7 @@ class TokenServiceImplTest {
         tokenService.issueTokens(42L, "user@example.com");
         tokenService.issueTokens(42L, "user@example.com");
 
-        verify(jwtIssuer, times(2)).issueAccessToken(any(), any(), claimCaptor.capture());
+        verify(jwtIssuer, times(2)).issueAccessToken(any(), any(), claimCaptor.capture(), any());
         verify(tokenRepository, times(2)).save(rowCaptor.capture());
 
         assertThat(claimCaptor.getAllValues().get(0)).isNotEqualTo(claimCaptor.getAllValues().get(1));

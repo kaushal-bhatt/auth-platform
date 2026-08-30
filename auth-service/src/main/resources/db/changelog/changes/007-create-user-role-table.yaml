@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-create-user-role-table
+      author: auth-platform
+      # Authorisation, kept out of app_user on purpose. A user has zero or more roles, and a
+      # roles column would have meant either a delimited string (unqueryable, and corrupted by
+      # any role name containing the delimiter) or a Postgres array that JPA maps awkwardly.
+      #
+      # Nothing grants a role automatically: registration is open on the public demo, so every
+      # account starts with none and a valid token proves only "this person registered". Roles
+      # are granted deliberately — see 008 for the one this deployment needs.
+      changes:
+        - createTable:
+            tableName: user_role
+            schemaName: auth
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+
+        # Composite primary key rather than a surrogate id: the pair IS the fact, and it makes
+        # granting the same role twice impossible rather than merely unlikely.
+        - addPrimaryKey:
+            tableName: user_role
+            schemaName: auth
+            columnNames: user_id, role
+            constraintName: pk_user_role
+
+        - addForeignKeyConstraint:
+            constraintName: fk_user_role_user
+            baseTableName: user_role
+            baseTableSchemaName: auth
+            baseColumnNames: user_id
+            referencedTableName: app_user
+            referencedTableSchemaName: auth
+            referencedColumnNames: id
+            # Deleting an account must take its grants with it. Without this a future account
+            # deletion would leave orphaned rows that a recycled id could inherit.
+            onDelete: CASCADE

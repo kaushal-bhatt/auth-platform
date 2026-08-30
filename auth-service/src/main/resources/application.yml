@@ -58,3 +58,25 @@ auth-platform:
     relying-party-id: localhost
     relying-party-name: Auth Platform
     origin: http://localhost:3000
+  sso:
+    # Relying parties allowed to sign users in through this service (see SsoController).
+    #
+    # Empty by default, which switches the redirect flow off entirely: a fresh checkout of a
+    # public repository should not expose a login surface for a client nobody declared. Add one
+    # per deployment, via environment variables rather than here — the secret must not live in
+    # source control.
+    #
+    #   AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_SECRET=<openssl rand -base64 32>
+    #   AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_REDIRECT_URIS=https://wekt.in/api/auth/callback
+    #   AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_REQUIRED_ROLE=portfolio-admin
+    #
+    # `portfolio` there is the client_id. REDIRECT_URIS takes a comma-separated list, and every
+    # entry is matched by exact string equality — never by prefix. Setting REQUIRED_ROLE is
+    # strongly advised: registration is open, so without it any account that signed up seconds
+    # ago satisfies "authenticated".
+    clients: {}
+    # How long a code stays redeemable. Short because it travels in a redirect URL, which ends
+    # up in browser history and Referer headers; one server round trip is all it needs to live.
+    code-ttl-seconds: 60
+    # How long spent and expired code rows are kept before the purge clears them.
+    code-retention-minutes: 60

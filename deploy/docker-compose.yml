@@ -76,8 +76,16 @@ services:
       # a flaw there cannot reach the auth tables. Created once by hand — see
       # DEPLOY.md, "Adding the portfolio".
       DATABASE_URL: postgresql://${PORTFOLIO_DB_USER:-portfolio}:${PORTFOLIO_DB_PASSWORD}@postgres:5432/${PORTFOLIO_DB:-portfolio}
-      NEXTAUTH_URL: https://${ROOT_DOMAIN}
-      NEXTAUTH_SECRET: ${PORTFOLIO_NEXTAUTH_SECRET}
+      # Where the browser is sent to sign in.
+      AUTH_PLATFORM_URL: https://${AUTH_DOMAIN}
+      # Where this container talks to the auth service directly. Both run here,
+      # so the code exchange and the JWKS fetch stay on the compose network
+      # instead of leaving the box and hairpinning back in through Caddy — a
+      # round trip several Docker and NAT setups quietly refuse to make.
+      AUTH_PLATFORM_INTERNAL_URL: http://auth-service:8080
+      PORTFOLIO_BASE_URL: https://${ROOT_DOMAIN}
+      AUTH_PLATFORM_SSO_CLIENT_ID: ${AUTH_PLATFORM_SSO_CLIENT_ID:-portfolio}
+      AUTH_PLATFORM_SSO_CLIENT_SECRET: ${AUTH_PLATFORM_SSO_CLIENT_SECRET}
       NODE_ENV: production
     mem_limit: 400m
 

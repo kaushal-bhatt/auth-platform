@@ -14,7 +14,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -24,7 +26,22 @@ public class JwtIssuer {
     private final KeysService keysService;
     private final JwtIssuerProperties issuerProperties;
 
-    public String issueAccessToken(Long userId, String email, UUID sessionId) {
+    /**
+     * @param roles the user's granted roles, possibly empty — never null. Emitted as a
+     *              {@code roles} claim so a relying party can decide what a token is allowed to
+     *              do, not merely that it is valid. This matters because registration is open on
+     *              the public demo: without it, "holds a signature-valid token" means "signed up",
+     *              which is not a basis for letting anyone into anything.
+     *              <p>
+     *              Always present, even when empty, so consumers can read one shape rather than
+     *              handling a missing claim as a separate case.
+     *              <p>
+     *              Note that auth-jwt-lib's {@code JwtClaims} does not surface this yet — its
+     *              consumers are Java services that have no use for it today, and widening that
+     *              record is a breaking change for every caller. The relying party this was built
+     *              for reads the claim straight off the verified token.
+     */
+    public String issueAccessToken(Long userId, String email, UUID sessionId, Collection<String> roles) {
         CertificateEntity certificate = keysService.getActiveKey();
         Instant now = Instant.now();
         Instant expiry = now.plus(issuerProperties.getAccessTokenExpiryMinutes(), ChronoUnit.MINUTES);
@@ -33,6 +50,7 @@ public class JwtIssuer {
             .subject(userId.toString())
             .claim("email", email)
             .claim("sess", sessionId.toString())
+            .claim("roles", List.copyOf(roles))
             // configuration-driven, not a literal: auth-jwt-lib's expected-audience check is
             // optional and currently unset, so nothing today would notice a mismatch. See
             // JwtIssuerProperties#audience.
