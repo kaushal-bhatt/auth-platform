@@ -12,10 +12,13 @@ import com.authplatform.auth.service.PasskeyRegistrationService;
 import com.webauthn4j.WebAuthnManager;
 import com.webauthn4j.converter.AttestedCredentialDataConverter;
 import com.webauthn4j.converter.exception.DataConversionException;
+import com.webauthn4j.data.PublicKeyCredentialParameters;
+import com.webauthn4j.data.PublicKeyCredentialType;
 import com.webauthn4j.data.RegistrationData;
 import com.webauthn4j.data.RegistrationParameters;
 import com.webauthn4j.data.RegistrationRequest;
 import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData;
+import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier;
 import com.webauthn4j.data.client.Origin;
 import com.webauthn4j.data.client.challenge.Challenge;
 import com.webauthn4j.data.client.challenge.DefaultChallenge;
@@ -69,6 +72,27 @@ public class PasskeyRegistrationServiceImpl implements PasskeyRegistrationServic
 
     private static final long TIMEOUT_MILLIS = 60_000;
 
+    /**
+     * Signature algorithms this service will register a credential for.
+     * <p>
+     * One list, used twice: it is what {@link #initRegistration} advertises to the browser, and
+     * what {@link #completeRegistration} validates the result against. Those were separate before
+     * — the browser was offered ES256 only, while validation passed {@code null} for the
+     * parameters, meaning webauthn4j accepted <em>any</em> algorithm. A server should not accept
+     * something it never offered, and keeping the two in one place is the only way that stays
+     * true.
+     * <p>
+     * <strong>ES256 only was also a compatibility problem.</strong> Chrome warns about it
+     * directly: an authenticator that supports RS256 but not ES256 — some TPM-backed Windows
+     * Hello configurations, some older security keys — simply cannot register. ES256 stays first
+     * because authenticators pick the first algorithm they support and it is the smaller, more
+     * modern choice; RS256 is the fallback that makes the rest of the field work.
+     */
+    private static final List<PublicKeyCredentialParameters> SUPPORTED_ALGORITHMS = List.of(
+        new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.ES256),
+        new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.RS256)
+    );
+
     private final PasskeyChallengeHelper passkeyChallengeHelper;
     private final PasskeyCredentialRepository passkeyCredentialRepository;
     private final UserRepository userRepository;
@@ -89,7 +113,10 @@ public class PasskeyRegistrationServiceImpl implements PasskeyRegistrationServic
             user.getEmail(),
             webAuthnProperties.getRelyingPartyId(),
             webAuthnProperties.getRelyingPartyName(),
-            List.of(new PasskeyRegisterInitResponse.PubKeyCredParam("public-key", -7)),
+            SUPPORTED_ALGORITHMS.stream()
+                .map(p -> new PasskeyRegisterInitResponse.PubKeyCredParam(
+                    p.getType().getValue(), (int) p.getAlg().getValue()))
+                .toList(),
             TIMEOUT_MILLIS
         );
     }
@@ -117,7 +144,10 @@ public class PasskeyRegistrationServiceImpl implements PasskeyRegistrationServic
             null
         );
 
-        RegistrationParameters registrationParameters = new RegistrationParameters(serverProperty, null, true);
+        // The algorithm list is passed, not null: webauthn4j then refuses a credential signed
+        // with anything this service did not advertise. With null it accepted whatever arrived.
+        RegistrationParameters registrationParameters =
+            new RegistrationParameters(serverProperty, SUPPORTED_ALGORITHMS, true);
 
         RegistrationData registrationData;
         try {

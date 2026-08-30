@@ -134,8 +134,16 @@ class PasskeyRegistrationControllerTest {
             .andExpect(jsonPath("$.userName").value("passkey-init-user@example.com"))
             .andExpect(jsonPath("$.rpId").value("localhost"))
             .andExpect(jsonPath("$.rpName").value("Auth Platform"))
+            // ES256 first — authenticators take the first algorithm they support, and it is the
+            // smaller, more modern one.
             .andExpect(jsonPath("$.pubKeyCredParams[0].type").value("public-key"))
-            .andExpect(jsonPath("$.pubKeyCredParams[0].alg").value(-7));
+            .andExpect(jsonPath("$.pubKeyCredParams[0].alg").value(-7))
+            // RS256 must be offered too. Advertising ES256 alone locks out authenticators that
+            // only do RS256 — some TPM-backed Windows Hello setups and older security keys —
+            // and Chrome warns about exactly this. It is invisible until someone with the wrong
+            // hardware tries to register, which is why it is pinned here.
+            .andExpect(jsonPath("$.pubKeyCredParams[1].type").value("public-key"))
+            .andExpect(jsonPath("$.pubKeyCredParams[1].alg").value(-257));
     }
 
     @Test
