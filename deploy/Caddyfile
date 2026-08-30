@@ -17,7 +17,40 @@
 # built, and had to stay a 302 — a 301 would have sat in visitors' browser
 # caches and kept bouncing them to the demo after the site went live. A
 # www-to-apex redirect has no such end date, so caching it is the point.
+# Response headers every site below sends. Defined once and imported into each
+# block, so the two sites cannot quietly drift apart on this.
+(security_headers) {
+	header {
+		# Reach this host over https for the next year, so a later visit typed
+		# as http:// never leaves the machine in the clear — there is no
+		# plaintext request on the wire for anyone on the path to read or
+		# redirect. Not `preload`: that ships the domain inside browser
+		# binaries and is slow and painful to undo.
+		Strict-Transport-Security "max-age=31536000"
+
+		# No framing, by anyone. The sign-in page is why this is here: put it
+		# in an invisible iframe over a page of their own and an attacker can
+		# have a visitor click a real button without ever seeing what they
+		# clicked.
+		X-Frame-Options "DENY"
+
+		# Serve declared content types as declared. Without this a browser may
+		# sniff a response into being a script.
+		X-Content-Type-Options "nosniff"
+
+		# The SSO callback carries a one-time code in its query string, and
+		# under the default policy that whole URL rides along in the Referer
+		# header of anything the page then requests off-site. Origin only.
+		Referrer-Policy "strict-origin-when-cross-origin"
+
+		# Next.js announces itself on every response. Nothing needs to know
+		# which framework and version is answering.
+		-X-Powered-By
+	}
+}
+
 www.{$ROOT_DOMAIN:localhost} {
+	import security_headers
 	redir https://{$ROOT_DOMAIN}{uri} permanent
 }
 
@@ -28,12 +61,14 @@ www.{$ROOT_DOMAIN:localhost} {
 # does not set it gets a harmless no-op instead of a cert-failure restart loop
 # that would take AUTH_DOMAIN down with it.
 {$ROOT_DOMAIN:localhost} {
+	import security_headers
 	encode zstd gzip
 
 	reverse_proxy {$PORTFOLIO_UPSTREAM:portfolio:3000}
 }
 
 {$AUTH_DOMAIN} {
+	import security_headers
 	encode zstd gzip
 
 	reverse_proxy {$UPSTREAM:127.0.0.1:8080} {
