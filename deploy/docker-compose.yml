@@ -15,9 +15,17 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
-    # Never published to the host — only auth-service reaches it over the
-    # compose network. The DB is not internet-facing at all.
-    expose: ["5432"]
+    # Bound to the host's LOOPBACK only — never to 0.0.0.0. The services reach it
+    # over the compose network as before; this mapping exists so a database
+    # client can be used through an SSH tunnel, which terminates on this box and
+    # so arrives as a connection from 127.0.0.1.
+    #
+    # The distinction matters: "5432:5432" would publish it on every interface,
+    # and the only thing standing between the internet and the database would be
+    # the cloud firewall — one console misclick away from being wrong. With the
+    # address, the kernel refuses anything that did not originate on the host,
+    # whatever the firewall says.
+    ports: ["127.0.0.1:5432:5432"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
