@@ -48,6 +48,31 @@ public class RateLimitProperties {
     private boolean trustForwardedFor = true;
 
     /**
+     * Skip the limit for requests that did not arrive through the trusted reverse proxy.
+     * <p>
+     * The limit exists to throttle the public demo, and its counter is keyed on client IP alone -
+     * not on IP and path. Server-to-server callers on the internal network therefore all collapse
+     * into a single bucket: every request the portfolio makes to {@code /auth/refresh} on behalf of
+     * every admin session shares one allowance of {@link #getMaxRequests()}. With a 15-minute
+     * access token that is four refreshes an hour, so a day's worth of ordinary admin work
+     * exhausts the whole window and the admin is then forced to sign in again every 15 minutes
+     * until it resets. That is the demo's throttle punishing the one caller it was never aimed at.
+     * <p>
+     * Absence of {@code X-Real-IP} is what identifies such a caller, and it is a sound signal
+     * precisely because of the deployment topology: the app container publishes no host port
+     * ({@code expose}, not {@code ports}), so the only route in from the internet is the proxy, and
+     * the proxy sets that header with {@code header_up} on every request it forwards. A caller who
+     * reaches this service without it is by construction already inside the network.
+     * <p>
+     * That reasoning depends entirely on the topology, so this is a switch rather than an
+     * assumption: set it {@code false} anywhere the service is reachable directly, where the
+     * absence of a header proves nothing and this would hand every client a way to opt out of the
+     * limit. It is ignored unless {@link #isTrustForwardedFor()} is also true, since that flag is
+     * the existing statement that a trusted proxy is in front.
+     */
+    private boolean exemptUnproxiedRequests = true;
+
+    /**
      * Ant-style path patterns whose requests count against the limit. Defaults to the demo's
      * state-changing auth actions; the always-public bootstrap reads (JWKS) and the demo page's own
      * static assets are intentionally never limited.
@@ -56,6 +81,11 @@ public class RateLimitProperties {
         "/auth/register",
         "/auth/login",
         "/auth/refresh",
+        // Reachable from the internet and authenticated only by the client secret, so without a
+        // limit an attacker may guess that secret as fast as the network allows. It does not
+        // change the demo-run arithmetic on maxRequests above: a visitor never calls this, only
+        // the portfolio's server does, and that caller is exempt under exemptUnproxiedRequests.
+        "/sso/token",
         "/passkey/register/init",
         "/passkey/register/complete",
         "/passkey/login/init",

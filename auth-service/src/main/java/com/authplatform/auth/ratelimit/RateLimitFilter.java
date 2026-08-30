@@ -75,7 +75,28 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return true;
         }
         String path = request.getRequestURI();
-        return properties.getLimitedPaths().stream().noneMatch(pattern -> pathMatcher.match(pattern, path));
+        if (properties.getLimitedPaths().stream().noneMatch(pattern -> pathMatcher.match(pattern, path))) {
+            return true;
+        }
+        return isUnproxied(request);
+    }
+
+    /**
+     * Whether this request reached the service without passing through the trusted reverse proxy,
+     * which - given the deployment topology - means it came from inside the network rather than
+     * from the internet.
+     * <p>
+     * See {@link RateLimitProperties#isExemptUnproxiedRequests()} for why that inference holds and
+     * when it stops holding. Both flags are required: {@code trustForwardedFor} is the deployment's
+     * existing declaration that a proxy sits in front, and without it the absence of a header says
+     * nothing at all - treating it as an exemption would switch the limiter off for everyone.
+     */
+    private boolean isUnproxied(HttpServletRequest request) {
+        if (!properties.isExemptUnproxiedRequests() || !properties.isTrustForwardedFor()) {
+            return false;
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        return realIp == null || realIp.isBlank();
     }
 
     @Override

@@ -11,8 +11,9 @@ import org.springframework.mock.web.MockHttpServletResponse;
 /**
  * Unit tests for {@link RateLimitFilter}, driven with Spring's mock servlet objects so no web
  * server, database, or Docker is involved. These pin the demo guard-rail's contract: it is off
- * unless enabled, it only counts configured paths, it keys on the client IP, and it flips to 429
- * strictly after the configured allowance.
+ * unless enabled, it only counts configured paths, it keys on the client IP, it flips to 429
+ * strictly after the configured allowance, and it lets through callers that reached the service
+ * without passing the trusted proxy - but only where a trusted proxy is declared to exist.
  */
 class RateLimitFilterTest {
 
@@ -21,6 +22,19 @@ class RateLimitFilterTest {
         p.setEnabled(enabled);
         p.setMaxRequests(max);
         p.setWindowHours(24);
+        // The tests below are about counting and about which value the counter is keyed on, and
+        // they build requests the way a client reaches the socket rather than the way the proxy
+        // forwards one - no X-Real-IP. That is exactly what the exemption keys on, so leaving it
+        // at its default would exempt nearly every request here and quietly turn these into
+        // assertions that nothing is ever limited. The exemption has its own tests instead.
+        p.setExemptUnproxiedRequests(false);
+        return p;
+    }
+
+    /** As {@link #props(boolean, int)}, but with the unproxied-caller exemption left switched on. */
+    private RateLimitProperties propsWithExemption(int max) {
+        RateLimitProperties p = props(true, max);
+        p.setExemptUnproxiedRequests(true);
         return p;
     }
 
@@ -105,6 +119,53 @@ class RateLimitFilterTest {
         MockHttpServletRequest second = post("/auth/login", "10.0.0.1");
         second.addHeader("X-Forwarded-For", "2.2.2.2, 203.0.113.7");
         assertThat(run(filter, second)).isEqualTo(429);
+    }
+
+    @Test
+    void ssoTokenExchangeIsLimited() throws Exception {
+        // Reachable from the internet and guarded only by the client secret, so an unlimited
+        // endpoint here is an unlimited number of guesses at that secret.
+        RateLimitFilter filter = new RateLimitFilter(props(true, 1));
+        assertThat(run(filter, post("/sso/token", "6.6.6.6"))).isEqualTo(HttpServletResponse.SC_OK);
+        assertThat(run(filter, post("/sso/token", "6.6.6.6"))).isEqualTo(429);
+    }
+
+    @Test
+    void callersThatDidNotComeThroughTheProxyAreExempt() throws Exception {
+        // The portfolio reaching auth-service directly over the internal network. Without this it
+        // shares one allowance across every admin session, and a day of ordinary admin work spends
+        // the whole window on token refreshes.
+        RateLimitFilter filter = new RateLimitFilter(propsWithExemption(1));
+        for (int i = 0; i < 10; i++) {
+            assertThat(run(filter, post("/auth/refresh", "172.18.0.5")))
+                .as("internal request %d", i + 1)
+                .isEqualTo(HttpServletResponse.SC_OK);
+        }
+    }
+
+    @Test
+    void exemptionDoesNotReachCallersArrivingThroughTheProxy() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter(propsWithExemption(1));
+        MockHttpServletRequest first = post("/auth/login", "10.0.0.1");
+        first.addHeader("X-Real-IP", "203.0.113.7");
+        assertThat(run(filter, first)).isEqualTo(HttpServletResponse.SC_OK);
+
+        MockHttpServletRequest second = post("/auth/login", "10.0.0.1");
+        second.addHeader("X-Real-IP", "203.0.113.7");
+        assertThat(run(filter, second)).isEqualTo(429);
+    }
+
+    @Test
+    void exemptionIsInertWhenNoProxyIsTrusted() throws Exception {
+        // Without a trusted proxy in front, a missing X-Real-IP proves nothing - every caller
+        // arrives without one. Honouring the exemption there would switch the limiter off for
+        // everybody, so it must stay dormant.
+        RateLimitProperties p = propsWithExemption(1);
+        p.setTrustForwardedFor(false);
+        RateLimitFilter filter = new RateLimitFilter(p);
+
+        assertThat(run(filter, post("/auth/login", "7.7.7.7"))).isEqualTo(HttpServletResponse.SC_OK);
+        assertThat(run(filter, post("/auth/login", "7.7.7.7"))).isEqualTo(429);
     }
 
     @Test
