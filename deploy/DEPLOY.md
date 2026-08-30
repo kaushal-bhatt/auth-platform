@@ -313,9 +313,10 @@ so re-running it cannot wipe the site. Delete `/tmp/portfolio` afterwards.
 
 ### Wiring it up
 
-1. Set `ROOT_DOMAIN` and `PORTFOLIO_DB_PASSWORD` in `.env`, plus the SSO pair —
-   `AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_*` for this service and the matching
-   `AUTH_PLATFORM_SSO_CLIENT_SECRET` for the site.
+1. Set `ROOT_DOMAIN`, `PORTFOLIO_DB_PASSWORD`, and the SSO settings in `.env`:
+   `AUTH_PLATFORM_SSO_CLIENT_SECRET`, `AUTH_PLATFORM_SSO_REDIRECT_URIS`,
+   `AUTH_PLATFORM_SSO_REQUIRED_ROLE`. The secret is one variable read by both
+   containers — auth-service verifies it, the site presents it.
 2. Point both the apex and `www` at this host (A records, **DNS only** — a proxy in front
    breaks the ACME challenge).
 3. `docker compose -f deploy/docker-compose.yml --env-file .env up -d`

@@ -59,22 +59,28 @@ auth-platform:
     relying-party-name: Auth Platform
     origin: http://localhost:3000
   sso:
-    # Relying parties allowed to sign users in through this service (see SsoController).
+    # The relying party allowed to sign users in through this service (see SsoController).
     #
-    # Empty by default, which switches the redirect flow off entirely: a fresh checkout of a
-    # public repository should not expose a login surface for a client nobody declared. Add one
-    # per deployment, via environment variables rather than here — the secret must not live in
-    # source control.
+    # No client secret means the redirect flow is OFF, which is the right default for a public
+    # repository: a fresh checkout exposes no login surface for a client nobody declared.
+    # Configure per deployment via environment variables — the secret must not live in source
+    # control:
     #
-    #   AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_SECRET=<openssl rand -base64 32>
-    #   AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_REDIRECT_URIS=https://wekt.in/api/auth/callback
-    #   AUTH_PLATFORM_SSO_CLIENTS_PORTFOLIO_REQUIRED_ROLE=portfolio-admin
+    #   AUTH_PLATFORM_SSO_CLIENT_SECRET=<openssl rand -base64 32>
+    #   AUTH_PLATFORM_SSO_REDIRECT_URIS=https://wekt.in/api/auth/callback
+    #   AUTH_PLATFORM_SSO_REQUIRED_ROLE=portfolio-admin
     #
-    # `portfolio` there is the client_id. REDIRECT_URIS takes a comma-separated list, and every
-    # entry is matched by exact string equality — never by prefix. Setting REQUIRED_ROLE is
-    # strongly advised: registration is open, so without it any account that signed up seconds
-    # ago satisfies "authenticated".
-    clients: {}
+    # One client, flat, and not a map keyed by client id — Spring cannot bind a map from
+    # environment variables when the prefix contains a dash, because it cannot tell which
+    # underscores were dots and which were dashes. It binds nothing and answers "unknown client".
+    #
+    # REDIRECT_URIS is a comma-separated list, every entry matched by exact string equality and
+    # never by prefix. Setting REQUIRED_ROLE is strongly advised: registration is open, so
+    # without it any account that signed up seconds ago satisfies "authenticated".
+    client-id: portfolio
+    client-secret: ${AUTH_PLATFORM_SSO_CLIENT_SECRET:}
+    redirect-uris: ${AUTH_PLATFORM_SSO_REDIRECT_URIS:}
+    required-role: ${AUTH_PLATFORM_SSO_REQUIRED_ROLE:}
     # How long a code stays redeemable. Short because it travels in a redirect URL, which ends
     # up in browser history and Referer headers; one server round trip is all it needs to live.
     code-ttl-seconds: 60

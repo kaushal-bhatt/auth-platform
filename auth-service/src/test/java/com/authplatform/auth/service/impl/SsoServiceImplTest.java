@@ -18,7 +18,6 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -54,13 +53,11 @@ class SsoServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        SsoProperties.Client client = new SsoProperties.Client();
-        client.setSecret(SECRET);
-        client.setRedirectUris(List.of(REDIRECT));
-        client.setRequiredRole("portfolio-admin");
-
         properties = new SsoProperties();
-        properties.setClients(Map.of(CLIENT_ID, client));
+        properties.setClientId(CLIENT_ID);
+        properties.setClientSecret(SECRET);
+        properties.setRedirectUris(List.of(REDIRECT));
+        properties.setRequiredRole("portfolio-admin");
 
         authCodeRepository = mock(SsoAuthCodeRepository.class);
         userRepository = mock(UserRepository.class);
@@ -158,7 +155,7 @@ class SsoServiceImplTest {
 
     @Test
     void issueCodeAllowsAnyAuthenticatedUserWhenTheClientRequiresNoRole() {
-        properties.getClients().get(CLIENT_ID).setRequiredRole(null);
+        properties.setRequiredRole(null);
         when(userRepository.findRolesByUserId(USER_ID)).thenReturn(Set.of());
 
         assertThat(ssoService.issueCode(USER_ID, CLIENT_ID, REDIRECT, STATE)).contains("code=");

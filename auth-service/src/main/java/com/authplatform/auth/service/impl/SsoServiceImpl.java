@@ -65,9 +65,9 @@ public class SsoServiceImpl implements SsoService {
             throw new CustomException(400, "state is required");
         }
 
-        SsoProperties.Client client = requireRegistered(clientId, redirectUri);
+        requireRegistered(clientId, redirectUri);
 
-        String requiredRole = client.getRequiredRole();
+        String requiredRole = ssoProperties.getRequiredRole();
         if (requiredRole != null && !requiredRole.isBlank()
             && !userRepository.findRolesByUserId(userId).contains(requiredRole)) {
             // Registration on the demo is open to anyone, so "holds a valid token" is not a
@@ -108,8 +108,9 @@ public class SsoServiceImpl implements SsoService {
     @Override
     @Transactional
     public TokenResponse exchangeCode(String clientId, String clientSecret, String code, String redirectUri) {
-        SsoProperties.Client client = ssoProperties.getClients().get(clientId);
-        if (client == null || !secretMatches(client.getSecret(), clientSecret)) {
+        if (!ssoProperties.isEnabled()
+            || !ssoProperties.getClientId().equals(clientId)
+            || !secretMatches(ssoProperties.getClientSecret(), clientSecret)) {
             // Same response whether the client is unknown or the secret is wrong, so this cannot
             // be used to enumerate registered clients.
             throw new CustomException(401, "client authentication failed");
@@ -149,19 +150,17 @@ public class SsoServiceImpl implements SsoService {
         return tokenService.issueTokens(user.getId(), user.getEmail());
     }
 
-    private SsoProperties.Client requireRegistered(String clientId, String redirectUri) {
-        SsoProperties.Client client = ssoProperties.getClients().get(clientId);
-        if (client == null) {
+    private void requireRegistered(String clientId, String redirectUri) {
+        if (!ssoProperties.isEnabled() || !ssoProperties.getClientId().equals(clientId)) {
             throw new CustomException(400, "unknown client");
         }
         // Full string equality, never a prefix or host comparison. A prefix match on
         // "https://wekt.in/" accepts "https://wekt.in/@attacker.example"; a host match ignores
         // the path entirely. Either turns this endpoint into an open redirect that hands
         // authorisation codes to whoever asks — the most exploited flaw in this kind of flow.
-        if (redirectUri == null || !client.getRedirectUris().contains(redirectUri)) {
+        if (redirectUri == null || !ssoProperties.getRedirectUris().contains(redirectUri)) {
             throw new CustomException(400, "redirect_uri is not registered for this client");
         }
-        return client;
     }
 
     /**
