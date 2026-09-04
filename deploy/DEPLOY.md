@@ -354,6 +354,57 @@ authorisation change does not wait for a session to end. Revoking is the matchin
 > unlikely to bite — you sign in rarely — but if it ever does, the fix is to count the SSO path
 > separately rather than to loosen the demo's limit.
 
+### Granting the super-admin role
+
+`portfolio-admin` says "a real administrator, not someone who signed up on the open demo". It
+does not say *which* portfolio. Once the site serves more than one host, every admin route also
+checks a `SiteUser` row in the portfolio database — except for holders of
+`portfolio-superadmin`, who bypass that lookup and may edit every site.
+
+It is a role rather than a column because it is a claim about a person, not about a site: a
+per-site flag would have to be set again for every site that ever exists, and forgetting is how
+someone locks themselves out of a portfolio they own.
+
+Same statement as above with the other name:
+
+```sql
+INSERT INTO auth.user_role (user_id, role)
+SELECT id, 'portfolio-superadmin' FROM auth.app_user WHERE email = 'you@example.com';
+```
+
+⚠️ **Grant this before deploying the multi-site build, and sign out and back in afterwards.**
+Roles travel inside the access token, so an existing session carries the old set until it is
+refreshed — the panel would verify you perfectly and then tell you the site is not yours. The
+fallback, if that happens, is a `SiteUser` row inserted by hand; the statement is at the bottom
+of `IdeaProjects/site-tenancy.sql`.
+
+## Adding a second portfolio
+
+One Next.js container serves both hostnames: it picks the site out of the `Host` header and
+reads a different set of rows. **No second image, no second database, no second deploy.**
+
+Four things, and none of them works alone:
+
+1. **DNS.** An A record for the new name at this host — **DNS only, never proxied**. A proxy in
+   front breaks Caddy's ACME challenge, exactly as it does for the apex.
+2. **`PORTFOLIO_DOMAIN_2`** in `.env`, then `docker compose … up -d caddy`. Caddy has a second
+   site block reverse-proxying the same `portfolio:3000`. Leave the variable unset and that
+   block binds to `second.localhost` and does nothing. It must not equal `ROOT_DOMAIN`: two site
+   blocks on one address is a config Caddy refuses to load, and it would take the auth service
+   down with it.
+3. **The callback in `AUTH_PLATFORM_SSO_REDIRECT_URIS`**, comma-separated alongside the first:
+   `https://wekt.in/api/auth/callback,https://neha.wekt.in/api/auth/callback`. The portfolio
+   derives `redirect_uri` from the host the visitor is actually on, and this service matches it
+   by exact string equality — so without the second entry the new site's admin authenticates
+   correctly and is then refused at the token exchange. It is a `List<String>`; one SSO client
+   serves both and nothing here needs a code change.
+4. **A `Site` row and an owner**, in the portfolio database. The row is what makes the host
+   resolve to anything; the `SiteUser` row is what lets its owner edit it. Both statements are
+   at the bottom of `IdeaProjects/site-tenancy.sql`.
+
+Order matters only in that DNS should be last if the site is to go live quietly — an empty
+portfolio answering on a live subdomain is worse than a subdomain that does not resolve yet.
+
 ## Keeping it alive
 
 Oracle reclaims **idle** Always Free compute instances. Its criteria are evaluated over a 7-day

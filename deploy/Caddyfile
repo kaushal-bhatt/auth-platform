@@ -67,6 +67,28 @@ www.{$ROOT_DOMAIN:localhost} {
 	reverse_proxy {$PORTFOLIO_UPSTREAM:portfolio:3000}
 }
 
+# The second portfolio.
+#
+# The SAME container as the block above — one Next.js instance serves both
+# hostnames, picks the site out of the `Host` header, and reads a different set
+# of rows. There is no second image, no second database and no second deploy.
+#
+# A named host rather than a wildcard. `*.{$ROOT_DOMAIN}` would need the DNS-01
+# challenge, which needs a Cloudflare API token and a Caddy build with that DNS
+# plugin in it — a lot of moving parts to save typing one name.
+#
+# The fallback is `second.localhost` and NOT `localhost`, which is the point of
+# it being a different word: two site blocks with the same address is a config
+# Caddy refuses to load at all, so an unset variable here would take down
+# auth.wekt.in as well. Like ROOT_DOMAIN, localhost gets an internal
+# certificate and never troubles Let's Encrypt.
+{$PORTFOLIO_DOMAIN_2:second.localhost} {
+	import security_headers
+	encode zstd gzip
+
+	reverse_proxy {$PORTFOLIO_UPSTREAM:portfolio:3000}
+}
+
 {$AUTH_DOMAIN} {
 	import security_headers
 	encode zstd gzip

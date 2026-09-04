@@ -110,8 +110,19 @@ services:
       # unset variable falls back, but an EMPTY one does not, and an empty site
       # address stops Caddy from starting at all.
       ROOT_DOMAIN: ${ROOT_DOMAIN:-localhost}
+      # The second portfolio's hostname. Same defaulting rule, and the fallback
+      # must differ from ROOT_DOMAIN's: two site blocks answering on the same
+      # address is a config Caddy refuses outright, which would take the auth
+      # service down with it.
+      PORTFOLIO_DOMAIN_2: ${PORTFOLIO_DOMAIN_2:-second.localhost}
       ACME_EMAIL: ${ACME_EMAIL}
       UPSTREAM: "auth-service:8080"
+      # The Caddyfile has referenced {$PORTFOLIO_UPSTREAM} since the portfolio
+      # was added, but it was never passed in here — so it always fell back to
+      # the literal in the default, and the variable did nothing. Harmless while
+      # the default was right; a trap the first time someone changed it and
+      # nothing happened. Two site blocks read it now.
+      PORTFOLIO_UPSTREAM: "portfolio:3000"
     # Points at the Caddyfile inside a DIRECTORY mount rather than bind-mounting
     # the file itself.
     #
