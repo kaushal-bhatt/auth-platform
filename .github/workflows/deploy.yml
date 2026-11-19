@@ -48,6 +48,12 @@ jobs:
           java-version: '21'
           cache: gradle
 
+      # The committed gradle.properties points the JVM at the Windows trust store
+      # (Windows-ROOT) for the dev machine, which does not exist on Linux and
+      # breaks every HTTPS download. Same override the Dockerfile applies.
+      - name: Use the default trust store
+        run: sed -i 's#^org.gradle.jvmargs=.*#org.gradle.jvmargs=-Xmx2048m#' gradle.properties
+
       # Through bash: gradlew is committed without the executable bit.
       - name: Test
         run: bash ./gradlew build
